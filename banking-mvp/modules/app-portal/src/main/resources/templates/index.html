@@ -2,45 +2,175 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title>Онлайн-банк: кредит и вклад</title>
+  <title>Онлайн-банк · демо</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial; margin: 24px; line-height: 1.5; }
-    .row { margin: 12px 0; }
-    .inline { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input, select, button, a.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font: inherit; }
-    button, a.btn { background:#111; color:#fff; text-decoration:none; border-color:#111; cursor:pointer; }
-    a.link { text-decoration: none; color: #0a58ca; }
+    :root{ --fg:#111; --muted:#666; --line:#e5e7eb; --pill:#f3f4f6; }
+    body{ font-family: system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,Arial; margin:24px; line-height:1.5; color:var(--fg); }
+    h1{ margin-bottom:8px; }
+    .muted{ color:var(--muted); }
+    .row{ margin:16px 0; }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+    .card{ border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .inline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input, select{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; font:inherit; }
+    button, a.btn{ padding:8px 12px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; text-decoration:none; cursor:pointer; }
+    a.link{ color:#0a58ca; text-decoration:none; }
+    .pill{ padding:6px 10px; border:1px solid var(--line); background:var(--pill); border-radius:999px; }
+    .btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
+    small.k{ font-family: ui-monospace,SFMono-Regular,Consolas,Menlo,monospace; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:#fafafa; }
   </style>
 </head>
 <body>
-<h1>Онлайн-банк: кредит и вклад</h1>
-<p>Стартовый скелет приложения на Spring Boot.</p>
+  <h1>Онлайн-банк · демо</h1>
+  <div class="muted">Скелет приложения на Spring Boot: согласие → счета → детали/балансы/транзакции; каталог продуктов.</div>
 
-<div class="row">
-  <a class="link" href="/health/vbank" target="_blank">Проверить доступ к VBank</a>
-</div>
-
-<div class="row">
-  <a class="link" href="/deposit/products">Посмотреть продукты (вклады/кредиты) из VBank</a>
-</div>
-
-<hr class="row"/>
-
-<div class="row">
-  <form class="inline" method="get" action="/accounts">
+  <!-- Глобальный выбор банка -->
+  <div class="row inline">
     <label for="bank">Банк:</label>
-    <select id="bank" name="bank">
+    <select id="bank">
       <option value="v">VBank</option>
       <option value="a">ABank</option>
       <option value="s">SBank</option>
     </select>
+    <span class="muted">Переключатель влияет на все ссылки ниже.</span>
+  </div>
 
-    <label for="login">Логин клиента:</label>
-    <input id="login" name="login" type="text" value="team101-1" placeholder="client_id клиента"/>
+  <div class="grid">
+    <!-- Проверки доступности -->
+    <div class="card">
+      <h3>Проверка доступности</h3>
+      <p class="muted">Быстрые health-пинги sandbox API.</p>
+      <div class="row inline">
+        <a class="btn secondary" id="health-link" href="/health/vbank" target="_blank">Открыть health</a>
+        <span class="pill" id="health-hint">/health/vbank</span>
+      </div>
+      <div class="row">
+        <a class="link" href="/health/vbank" target="_blank">VBank</a> ·
+        <a class="link" href="/health/abank" target="_blank">ABank</a> ·
+        <a class="link" href="/health/sbank" target="_blank">SBank</a>
+      </div>
+    </div>
 
-    <button type="submit">Счета клиента</button>
-  </form>
-</div>
+    <!-- Каталог продуктов -->
+    <div class="card">
+      <h3>Каталог продуктов</h3>
+      <p class="muted">Вклады/кредиты (UI) и «сырое» JSON.</p>
+      <div class="row inline">
+        <a class="btn" id="products-ui" href="/deposit/products?bank=v">Открыть UI</a>
+        <a class="btn secondary" id="products-json" href="/deposit/products.json?bank=v" target="_blank">Открыть JSON</a>
+      </div>
+      <div class="row muted">
+        Текущая ссылка: <small class="k" id="products-hint">/deposit/products?bank=v</small>
+      </div>
+    </div>
+
+    <!-- Счета клиента -->
+    <div class="card">
+      <h3>Счета клиента</h3>
+      <p class="muted">Создаём согласие и показываем счета. Для некоторых банков согласие будет <i>pending</i> (ожидает одобрения).</p>
+      <form class="inline" method="get" action="/accounts" id="accounts-form">
+        <input type="hidden" name="bank" id="bank-hidden" value="v"/>
+        <label for="login">Логин клиента:</label>
+        <input id="login" name="login" type="text" value="team101-1" placeholder="client_id клиента" required/>
+        <button type="submit">Показать счета</button>
+      </form>
+      <div class="row muted">
+        Эндпоинт: <small class="k" id="accounts-hint">/accounts?bank=v&login=…</small>
+      </div>
+    </div>
+
+    <!-- Детали счёта и транзакции -->
+    <div class="card">
+      <h3>Детали счёта и транзакции</h3>
+      <p class="muted">Быстрые ссылки на страницы «Детали» и «История» по известному <code>accountId</code> и <code>consentId</code>.</p>
+      <form class="inline" onsubmit="goAccount(event)">
+        <label for="accId">Account ID:</label>
+        <input id="accId" type="text" placeholder="acc-123" required/>
+        <label for="consId">Consent ID:</label>
+        <input id="consId" type="text" placeholder="consent-xyz" required/>
+        <button type="submit">Открыть детали</button>
+        <button type="button" class="btn secondary" onclick="goTx()">Открыть транзакции</button>
+      </form>
+      <div class="row muted">
+        Детали: <small class="k" id="account-hint">/accounts/{id}?bank=v&consentId=…</small><br/>
+        Транзакции: <small class="k" id="tx-hint">/accounts/{id}/transactions?bank=v&consentId=…</small>
+      </div>
+    </div>
+
+    <!-- Отладка статуса согласия -->
+    <div class="card">
+      <h3>Статус согласия (debug)</h3>
+      <p class="muted">Если у вас есть <code>consent_id</code>, этим GET можно проверить статус:</p>
+      <div class="row">
+        <small class="k">/consents/&lt;bank&gt;/&lt;consent_id&gt;/status</small>
+      </div>
+      <p class="muted">Пример: <a class="link" href="/consents/v/sample-consent/status" target="_blank">/consents/v/sample-consent/status</a></p>
+    </div>
+  </div>
+
+  <div class="row muted">
+    Подсказка: логины тестовых клиентов отличаются между банками. Для SBank подходят демо-логины вида
+    <small class="k">demo-033</small>, <small class="k">demo-101</small> и т.п.
+  </div>
+
+  <script>
+    // Единый переключатель банка: обновляет все ссылки и скрытое поле формы.
+    const bankSel    = document.getElementById('bank');
+    const bankHidden = document.getElementById('bank-hidden');
+
+    const healthLink = document.getElementById('health-link');
+    const healthHint = document.getElementById('health-hint');
+
+    const prodUi   = document.getElementById('products-ui');
+    const prodJson = document.getElementById('products-json');
+    const prodHint = document.getElementById('products-hint');
+
+    const accHint  = document.getElementById('accounts-hint');
+
+    const accountHint = document.getElementById('account-hint');
+    const txHint      = document.getElementById('tx-hint');
+
+    function applyBank(b) {
+      // health
+      const healthMap = { v: '/health/vbank', a: '/health/abank', s: '/health/sbank' };
+      healthLink.href = healthMap[b] || '/health/vbank';
+      healthHint.textContent = healthLink.href.replace(location.origin, '');
+
+      // products
+      prodUi.href   = '/deposit/products?bank=' + b;
+      prodJson.href = '/deposit/products.json?bank=' + b;
+      prodHint.textContent = prodUi.href.replace(location.origin, '');
+
+      // accounts form
+      bankHidden.value = b;
+      accHint.textContent = '/accounts?bank=' + b + '&login=…';
+
+      // account details/tx hints
+      accountHint.textContent = '/accounts/{id}?bank=' + b + '&consentId=…';
+      txHint.textContent      = '/accounts/{id}/transactions?bank=' + b + '&consentId=…';
+    }
+
+    function goAccount(e){
+      e.preventDefault();
+      const b  = bankSel.value || 'v';
+      const id = document.getElementById('accId').value.trim();
+      const c  = document.getElementById('consId').value.trim();
+      if(!id || !c) return;
+      location.href = '/accounts/' + encodeURIComponent(id) + '?bank=' + encodeURIComponent(b) + '&consentId=' + encodeURIComponent(c);
+    }
+
+    function goTx(){
+      const b  = bankSel.value || 'v';
+      const id = document.getElementById('accId').value.trim();
+      const c  = document.getElementById('consId').value.trim();
+      if(!id || !c) return;
+      location.href = '/accounts/' + encodeURIComponent(id) + '/transactions?bank=' + encodeURIComponent(b) + '&consentId=' + encodeURIComponent(c);
+    }
+
+    bankSel.addEventListener('change', () => applyBank(bankSel.value));
+    // init
+    applyBank(bankSel.value || 'v');
+  </script>
 </body>
 </html>

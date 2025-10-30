@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Счёт ' + (${accountId} ?: '—')">Счёт</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; --info:#172554; --bginfo:#f6f8ff; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:24px; line-height:1.5; color:var(--fg); }
+    h1 { margin: 0 0 4px; }
+    .muted { color: var(--muted); }
+    .row { margin: 12px 0; }
+    .label { color: var(--muted); font-size: 12px; }
+    pre { background:#0b1021; color:#e8eaf6; padding:12px; border-radius:8px; overflow:auto; border:1px solid #0b1021; }
+    .error { background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
+    .info { background:var(--bginfo); border:1px solid #c9d1ff; color:var(--info); padding:12px; border-radius:8px; }
+    a.btn { display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; background:#111; color:#fff; border:1px solid #111; }
+    .kv { display:flex; gap:12px; flex-wrap:wrap; }
+    .kv > div { min-width: 220px; }
+    code.k { padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="label">Счёт:</span>
+    <span th:text="${accountId} ?: '—'">—</span>
+  </h1>
+  <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
+
+  <!-- Шапка с параметрами контекста -->
+  <div class="row kv">
+    <div><span class="label">Банк:</span> <code class="k" th:text="${bank} ?: 'v'">v</code></div>
+    <div><span class="label">Логин клиента:</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
+    <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId} ?: '—'">—</code></div>
+  </div>
+
+  <!-- Ошибка верхнего уровня -->
+  <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+
+  <!-- Блок деталей счёта -->
+  <div class="row" th:if="${account}">
+    <div class="label">Детали</div>
+    <pre th:text="${#objects.toString(account)}">—</pre>
+  </div>
+
+  <!-- Блок балансов -->
+  <div class="row" th:if="${balances}">
+    <div class="label">Балансы</div>
+    <pre th:text="${#objects.toString(balances)}">—</pre>
+  </div>
+
+  <!-- Сырые ответы API (если захочешь прокидывать как строки JSON) -->
+  <div class="row" th:if="${accountJson}">
+    <div class="label">Ответ API (account)</div>
+    <pre th:text="${accountJson}">—</pre>
+  </div>
+  <div class="row" th:if="${balancesJson}">
+    <div class="label">Ответ API (balances)</div>
+    <pre th:text="${balancesJson}">—</pre>
+  </div>
+
+  <!-- Навигация -->
+  <p class="row" th:if="${accountId} and ${bank} and ${consentId}">
+    <a class="btn" th:href="@{|/accounts/${accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
+      История транзакций →
+    </a>
+  </p>
+
+  <p class="row">
+    <a th:href="@{|/accounts?bank=${bank}&login=${login}|}">⟵ Назад к счетам</a>
+  </p>
+</body>
+</html>

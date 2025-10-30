@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="${'Согласия (' + #strings.toUpperCase((bank != null ? bank : 'v')) + 'Bank)'}">Согласия</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{--fg:#111;--muted:#666;--line:#e5e7eb;--ok:#175;--bgok:#eafff4;--err:#b00020;--bgerr:#fff3f3}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial;margin:24px;line-height:1.5;color:var(--fg)}
+    header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .row{margin:12px 0}
+    pre{background:#0b1021;color:#e8eaf6;padding:12px;border-radius:8px;overflow:auto}
+    form.inline{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input[type=text],select{padding:6px 8px;border:1px solid #ddd;border-radius:8px}
+    button{padding:6px 10px;border-radius:8px;border:1px solid #111;background:#111;color:#fff;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+    th{background:#f8fafc}
+    code.k{padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px}
+    .ok{background:var(--bgok);color:var(--ok);padding:12px;border-radius:8px}
+    .error{background:var(--bgerr);color:var(--err);padding:12px;border-radius:8px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{display:inline-block;font-size:12px;padding:2px 6px;border-radius:999px;border:1px solid var(--line);background:#f9fafb;color:#111}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Согласия <span th:text="${#strings.toUpperCase((bank != null ? bank : 'v'))} + 'Bank'">VBank</span></h1>
+  <span class="muted" th:text="${'(' + (baseUrl != null ? baseUrl : '—') + ')'}">https://vbank.open.bankingapi.ru</span>
+</header>
+
+<!-- фильтр -->
+<div class="row">
+  <form class="inline" method="get" th:action="@{/consents}">
+    <label>Банк:
+      <select name="bank">
+        <option value="v" th:selected="${(bank != null ? bank : 'v') == 'v'}">VBank</option>
+        <option value="a" th:selected="${bank == 'a'}">ABank</option>
+        <option value="s" th:selected="${bank == 's'}">SBank</option>
+      </select>
+    </label>
+    <label>Логин клиента:
+      <input type="text" name="login" th:value="${login != null ? login : ''}" placeholder="team101-1"/>
+    </label>
+    <button type="submit">Обновить</button>
+  </form>
+</div>
+
+<!-- сообщения -->
+<div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+<div class="row ok" th:if="${info}" th:text="${info}">Ок</div>
+
+<!-- таблица согласий (если контроллер положил consents = List<Map>) -->
+<div class="row" th:if="${consents}">
+  <table>
+    <thead>
+      <tr>
+        <th>Consent ID</th>
+        <th>Status</th>
+        <th>Request ID</th>
+        <th>Auto</th>
+        <th>Permissions</th>
+        <th>Создано</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="c : ${consents}">
+        <td><code class="k" th:text="${c.consentId != null ? c.consentId : c.id}">—</code></td>
+        <td>
+          <span class="tag" th:text="${(c.status != null ? c.status : 'unknown')}">unknown</span>
+        </td>
+        <td><code class="k" th:text="${c.requestId != null ? c.requestId : (c.request_id != null ? c.request_id : '—')}">—</code></td>
+        <td th:text="${c.autoApproved != null ? c.autoApproved : (c.auto_approved != null ? c.auto_approved : '—')}">—</td>
+        <td>
+          <span th:if="${c.permissions}" th:each="p : ${c.permissions}">
+            <span class="tag" th:text="${p}">perm</span>
+          </span>
+          <span th:if="${c.permissions == null}">—</span>
+        </td>
+        <td th:text="${c.createdAt != null ? c.createdAt : (c.created_at != null ? c.created_at : '—')}">—</td>
+        <td class="actions">
+          <!-- Быстрый чек статуса (AJAX) -->
+          <button type="button"
+                  th:attr="data-consent-id=${c.consentId != null ? c.consentId : c.id}"
+                  class="js-check">Проверить</button>
+          <!-- Ссылка на счета при approved -->
+          <a th:if="${#strings.equalsIgnoreCase((c.status != null ? c.status : ''), 'approved') and login}"
+             th:href="@{|/accounts?bank=${bank}&login=${login}|}" class="tag"
+          >К счетам</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Сырый ответ API -->
+<h3 class="row" th:if="${consentsJson}">Сырые данные</h3>
+<pre class="row" th:if="${consentsJson}" th:text="${consentsJson}"></pre>
+
+<p class="row"><a href="/">⟵ На главную</a></p>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+  const bank = /*[[${(bank != null ? bank : 'v')}]]*/ 'v';
+  function normalizeStatus(x){ return (x||'').toString().trim().toLowerCase(); }
+
+  // Кнопки "Проверить" — спрашиваем /consents/{bank}/{id}/status и обновляем ячейку
+  document.querySelectorAll('.js-check').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-consent-id');
+      if (!id) return;
+      btn.disabled = true;
+      fetch(`/consents/${bank}/${id}/status`, { headers: { 'Accept':'application/json' }})
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(j => {
+          // найти строку и обновить статус
+          const tr = btn.closest('tr');
+          const tdStatus = tr?.querySelector('td:nth-child(2) .tag');
+          if (tdStatus && j && j.status) {
+            tdStatus.textContent = j.status;
+            if (normalizeStatus(j.status) === 'approved') {
+              // можно подсветить/обновить страницу при желании
+              // location.reload();
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => { btn.disabled = false; });
+    });
+  });
+/*]]>*/
+</script>
+</body>
+</html>

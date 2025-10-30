@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Транзакции [[${accountId}]]</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; margin:24px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #e5e7eb;padding:8px}
+    th{background:#f9fafb;text-align:left}
+    pre{background:#0b1021;color:#e8eaf6;padding:12px;border-radius:8px;overflow:auto}
+    .row{margin:12px 0}
+  </style>
+</head>
+<body>
+<h1>Транзакции счёта [[${accountId}]]</h1>
+
+<div class="row" th:if="${error}" style="color:#b00020;background:#fff3f3;padding:12px;border-radius:8px" th:text="${error}">Ошибка</div>
+
+<table th:if="${tx}">
+  <thead>
+    <tr><th>Дата</th><th>Описание</th><th>Сумма</th><th>Валюта</th></tr>
+  </thead>
+  <tbody>
+  <tr th:each="t : ${tx}">
+    <td th:text="|${t.date} ${t.bookingDate}|">2025-01-01</td>
+    <td th:text="${t.description} ?: ${t.remittanceInformation}">Payment</td>
+    <td th:text="${t.amount?.content} ?: ${t.amount}">0.00</td>
+    <td th:text="${t.amount?.currency} ?: ${t.currency}">RUB</td>
+  </tr>
+  </tbody>
+</table>
+
+<h3 class="row" th:if="${txJson}">Сырой ответ</h3>
+<pre class="row" th:if="${txJson}" th:text="${txJson}"></pre>
+
+<p class="row"><a th:href="@{|/accounts/${accountId}?bank=${bank}&consentId=${consentId}|}">⟵ К счёту</a></p>
+</body>
+</html>

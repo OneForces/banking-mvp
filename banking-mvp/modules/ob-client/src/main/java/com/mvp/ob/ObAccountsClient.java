@@ -27,9 +27,7 @@ public class ObAccountsClient {
     private final ObjectMapper mapper = new ObjectMapper();
 
     /**
-     * Создать согласие. Возвращает подробный результат (approved|pending).
-     * Если банк авто-одобряет — будет consentId и status=approved.
-     * Если требует ручного одобрения (например, SBank) — status=pending и requestId.
+     * POST {base}/account-consents/request — создать согласие.
      */
     public ConsentCreateResult createConsent(
             String bankBaseUrl,
@@ -40,7 +38,7 @@ public class ObAccountsClient {
         String body = """
             {
               "client_id": "%s",
-              "permissions": ["ReadAccountsDetail","ReadBalances"],
+              "permissions": ["ReadAccountsDetail","ReadBalances","ReadTransactions"],
               "reason": "HackAPI demo consent"
             }
             """.formatted(clientId);
@@ -54,8 +52,8 @@ public class ObAccountsClient {
                 .header(HDR_X_REQUEST_ID, UUID.randomUUID().toString())
                 .body(body)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, (req, res) -> {
-                    throw readAsObApiError("Consent request failed", res);
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Consent request failed", rs);
                 })
                 .body(String.class);
 
@@ -63,31 +61,25 @@ public class ObAccountsClient {
             JsonNode root = mapper.readTree(resp);
 
             String consentId     = asText(root.findValue("consent_id"));
-            String status        = asText(root.findValue("status"));         // "approved"|"pending"|...
+            String status        = asText(root.findValue("status"));
             String requestId     = asText(root.findValue("request_id"));
             Boolean autoApproved = asBoolean(root.findValue("auto_approved"));
             boolean auto = autoApproved != null && autoApproved;
 
-            // Если пришёл consent_id — считаем одобрено
             if (StringUtils.hasText(consentId)) {
                 if (!StringUtils.hasText(status)) status = "approved";
                 return new ConsentCreateResult(consentId, status, requestId, auto);
             }
-
-            // Нет consent_id, но есть pending/request_id — возвращаем pending
             if ("pending".equalsIgnoreCase(status) || StringUtils.hasText(requestId)) {
-                String s = StringUtils.hasText(status) ? status : "pending";
-                return new ConsentCreateResult(null, s, requestId, auto);
+                return new ConsentCreateResult(null, StringUtils.hasText(status) ? status : "pending", requestId, auto);
             }
-
-            // Иначе — неожиданный ответ
             throw new IllegalStateException("Unexpected consent response: " + resp);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse consent response: " + resp, e);
         }
     }
 
-    /** GET {base}/consents/{consentId} — получить статус согласия (для AJAX-пуллинга) */
+    /** GET {base}/consents/{id} — статус согласия. */
     public String getConsentStatus(
             String bankBaseUrl,
             String bearerToken,
@@ -107,13 +99,67 @@ public class ObAccountsClient {
         req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
 
         return req.retrieve()
-                .onStatus(HttpStatusCode::isError, (r, res) -> {
-                    throw readAsObApiError("Consent status fetch failed", res);
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Consent status fetch failed", rs);
                 })
                 .body(String.class);
     }
 
-    /** GET {base}/accounts?client_id={clientId} */
+    /** DELETE {base}/consents/{id} — отзыв согласия. */
+    public String deleteConsent(
+            String bankBaseUrl,
+            String bearerToken,
+            String consentId,
+            String requestingBank
+    ) {
+        URI uri = UriComponentsBuilder
+                .fromUriString(normalize(bankBaseUrl))
+                .path("/consents/{id}")
+                .buildAndExpand(consentId)
+                .toUri();
+
+        RestClient.RequestHeadersSpec<?> req = http.delete()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON);
+
+        req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
+
+        return req.retrieve()
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Consent revoke failed", rs);
+                })
+                .body(String.class);
+    }
+
+    /** GET {base}/consents?client_id=... — список согласий клиента. */
+    public String listConsents(
+            String bankBaseUrl,
+            String bearerToken,
+            String clientId,
+            String requestingBank
+    ) {
+        URI uri = UriComponentsBuilder
+                .fromUriString(normalize(bankBaseUrl))
+                .path("/consents")
+                .queryParam("client_id", clientId)
+                .build(true)
+                .toUri();
+
+        RestClient.RequestHeadersSpec<?> req = http.get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON);
+
+        // для списка согласий X-Consent-Id не требуется
+        req = addAuthHeaders(req, bearerToken, null, requestingBank);
+
+        return req.retrieve()
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Consents list fetch failed", rs);
+                })
+                .body(String.class);
+    }
+
+    /** GET {base}/accounts?client_id={clientId} — список счетов клиента. */
     public String getAccounts(
             String bankBaseUrl,
             String bearerToken,
@@ -135,13 +181,13 @@ public class ObAccountsClient {
         req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
 
         return req.retrieve()
-                .onStatus(HttpStatusCode::isError, (r, res) -> {
-                    throw readAsObApiError("Accounts fetch failed", res);
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Accounts fetch failed", rs);
                 })
                 .body(String.class);
     }
 
-    /** GET {base}/accounts/{accountId} */
+    /** GET {base}/accounts/{accountId} — детали счета. */
     public String getAccountById(
             String bankBaseUrl,
             String bearerToken,
@@ -162,13 +208,13 @@ public class ObAccountsClient {
         req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
 
         return req.retrieve()
-                .onStatus(HttpStatusCode::isError, (r, res) -> {
-                    throw readAsObApiError("Account fetch failed", res);
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Account fetch failed", rs);
                 })
                 .body(String.class);
     }
 
-    /** GET {base}/accounts/{accountId}/balances */
+    /** GET {base}/accounts/{accountId}/balances — балансы. */
     public String getAccountBalances(
             String bankBaseUrl,
             String bearerToken,
@@ -189,8 +235,40 @@ public class ObAccountsClient {
         req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
 
         return req.retrieve()
-                .onStatus(HttpStatusCode::isError, (r, res) -> {
-                    throw readAsObApiError("Balances fetch failed", res);
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Balances fetch failed", rs);
+                })
+                .body(String.class);
+    }
+
+    /** GET {base}/accounts/{accountId}/transactions[?from=YYYY-MM-DD&to=YYYY-MM-DD] — операции. */
+    public String getAccountTransactions(
+            String bankBaseUrl,
+            String bearerToken,
+            String accountId,
+            String consentId,
+            String requestingBank,
+            String fromDate,   // опционально
+            String toDate      // опционально
+    ) {
+        UriComponentsBuilder ub = UriComponentsBuilder
+                .fromUriString(normalize(bankBaseUrl))
+                .path("/accounts/{accountId}/transactions");
+
+        if (StringUtils.hasText(fromDate)) ub.queryParam("from", fromDate);
+        if (StringUtils.hasText(toDate))   ub.queryParam("to", toDate);
+
+        URI uri = ub.buildAndExpand(accountId).toUri();
+
+        RestClient.RequestHeadersSpec<?> req = http.get()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON);
+
+        req = addAuthHeaders(req, bearerToken, consentId, requestingBank);
+
+        return req.retrieve()
+                .onStatus(HttpStatusCode::isError, (rq, rs) -> {
+                    throw readAsObApiError("Transactions fetch failed", rs);
                 })
                 .body(String.class);
     }
@@ -212,9 +290,7 @@ public class ObAccountsClient {
         if (StringUtils.hasText(consentId)) {
             req = req.header(HDR_X_CONSENT_ID, consentId);
         }
-        // общий request-id для трассировки
-        req = req.header(HDR_X_REQUEST_ID, UUID.randomUUID().toString());
-        return req;
+        return req.header(HDR_X_REQUEST_ID, UUID.randomUUID().toString());
     }
 
     private static String normalize(String baseUrl) {
@@ -230,26 +306,23 @@ public class ObAccountsClient {
         return node == null || node.isNull() ? null : node.asBoolean();
     }
 
-    /** Унифицированное формирование понятной ошибки OB-клиента (RestClient). */
+    /** Унифицированная ошибка OB-клиента. */
     private static ObApiException readAsObApiError(String prefix, ClientHttpResponse res) {
         HttpStatusCode status;
         String body = null;
         try {
             status = res.getStatusCode();
             try (InputStream is = res.getBody()) {
-                if (is != null) {
-                    body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                }
+                if (is != null) body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (Exception e) {
             status = HttpStatusCode.valueOf(500);
         }
-        String msg = prefix + ": HTTP " + status
-                + (body != null && !body.isBlank() ? " — " + body : "");
+        String msg = prefix + ": HTTP " + status + (body != null && !body.isBlank() ? " — " + body : "");
         return new ObApiException(msg, status, body);
     }
 
-    /** Рантайм-исключение с HTTP-кодом и телом ответа банка. Удобно показывать в UI. */
+    /** Рантайм-исключение с HTTP-кодом и телом ответа банка. */
     public static class ObApiException extends RuntimeException {
         private final HttpStatusCode status;
         private final String responseBody;
@@ -260,12 +333,7 @@ public class ObAccountsClient {
             this.responseBody = responseBody;
         }
 
-        public HttpStatusCode getStatus() {
-            return status;
-        }
-
-        public String getResponseBody() {
-            return responseBody;
-        }
+        public HttpStatusCode getStatus() { return status; }
+        public String getResponseBody() { return responseBody; }
     }
 }

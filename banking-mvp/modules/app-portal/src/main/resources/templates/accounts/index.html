@@ -2,7 +2,7 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title th:text="${'Счета (' + #strings.toUpperCase(bank != null ? bank : 'v') + 'Bank)'}">Счета</title>
+  <title th:text="${'Счета (' + #strings.toUpperCase((bank != null ? bank : 'v')) + 'Bank)'}">Счета</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; }
@@ -29,7 +29,7 @@
 <body>
 <header>
   <h1>
-    Счета <span th:text="${#strings.toUpperCase(bank != null ? bank : 'v')} + 'Bank'">VBank</span>
+    Счета <span th:text="${#strings.toUpperCase((bank != null ? bank : 'v'))} + 'Bank'">VBank</span>
   </h1>
   <span class="muted" th:text="${'(' + (baseUrl != null ? baseUrl : '—') + ')'}">https://vbank.open.bankingapi.ru</span>
 </header>
@@ -44,7 +44,7 @@
       </select>
     </label>
     <label>Логин клиента:
-      <input type="text" name="login" th:value="${login} ?: ''" placeholder="team101-1" required/>
+      <input type="text" name="login" th:value="${login != null ? login : ''}" placeholder="team101-1" required/>
     </label>
     <button type="submit">Загрузить</button>
   </form>
@@ -52,7 +52,7 @@
 
 <!-- Блок сведений о согласии -->
 <div class="row kv" th:if="${consentStatus} or ${consentId} or ${consentRequestId}">
-  <div><span class="label">Согласие (status):</span> <code class="k" th:text="${consentStatus} ?: '—'">—</code></div>
+  <div><span class="label">Согласие (status):</span> <code class="k" th:text="${consentStatus != null ? consentStatus : '—'}">—</code></div>
   <div th:if="${consentId}"><span class="label">Consent ID:</span> <code class="k" th:text="${consentId}">—</code></div>
   <div th:if="${consentRequestId}"><span class="label">Request ID:</span> <code class="k" th:text="${consentRequestId}">—</code></div>
   <div th:if="${consentAutoApproved != null}">
@@ -75,12 +75,12 @@
 <!-- Карточки счетов -->
 <div class="grid" th:if="${accounts}">
   <div class="card" th:each="acc : ${accounts}">
-    <div class="label" th:text="${acc.accountType} ?: '—'">type</div>
-    <h3 th:text="${acc.accountName} ?: 'Без названия'">Название счета</h3>
+    <div class="label" th:text="${acc.accountType != null ? acc.accountType : '—'}">type</div>
+    <h3 th:text="${acc.accountName != null ? acc.accountName : 'Без названия'}">Название счета</h3>
     <div><span class="label">ID:</span> <code th:text="${acc.accountId}">acc-id</code></div>
-    <div><span class="label">Номер:</span> <span th:text="${acc.accountNumber} ?: '—'">—</span></div>
-    <div><span class="label">Валюта:</span> <span th:text="${acc.currency} ?: '—'">RUB</span></div>
-    <div><span class="label">Статус:</span> <span th:text="${acc.status} ?: '—'">active</span></div>
+    <div><span class="label">Номер:</span> <span th:text="${acc.accountNumber != null ? acc.accountNumber : '—'}">—</span></div>
+    <div><span class="label">Валюта:</span> <span th:text="${acc.currency != null ? acc.currency : '—'}">RUB</span></div>
+    <div><span class="label">Статус:</span> <span th:text="${acc.status != null ? acc.status : '—'}">active</span></div>
   </div>
 </div>
 
@@ -96,7 +96,7 @@
 
 <script th:inline="javascript">
 /*<![CDATA[*/
-  const bank = /*[[${bank} ?: 'v']]*/ 'v';
+  const bank = /*[[${(bank != null ? bank : 'v')}]]*/ 'v';
   const consentId = /*[[${consentId}]]*/ null;
   const consentStatus = /*[[${consentStatus}]]*/ null;
 

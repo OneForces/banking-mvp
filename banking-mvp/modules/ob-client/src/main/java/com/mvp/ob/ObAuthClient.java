@@ -8,6 +8,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -45,15 +47,26 @@ public class ObAuthClient {
         .build(true)
         .toUri();
 
-    String resp = http.post()
-        .uri(uri)
-        .accept(MediaType.APPLICATION_JSON)
-        .retrieve()
-        .body(String.class);
+    final String resp;
+    try {
+      resp = http.post()
+          .uri(uri)
+          .accept(MediaType.APPLICATION_JSON)
+          .retrieve()
+          .body(String.class);
+    } catch (RestClientResponseException e) {
+      // Вернуть информативную ошибку со статусом и "почищенным" телом
+      String body = sanitize(e.getResponseBodyAsString());
+      throw new IllegalStateException(
+          "Consent request failed: HTTP " + e.getRawStatusCode() + " " + e.getStatusText()
+              + " — " + (body == null ? "(empty body)" : body));
+    } catch (RestClientException e) {
+      throw new IllegalStateException("I/O error on POST " + uri + ": " + e.getMessage(), e);
+    }
 
     String token = TokenUtils.extractAnyToken(resp);
     if (token == null) {
-      throw new IllegalStateException("Token not found in response: " + resp);
+      throw new IllegalStateException("Token not found in response: " + sanitize(resp));
     }
 
     long ttlSec = extractExpiresInSeconds(resp); // обычно 86400
@@ -72,16 +85,27 @@ public class ObAuthClient {
         {"username":"%s","password":"%s"}
         """.formatted(username, password);
 
-    String resp = http.post()
-        .uri(baseUrl + "/auth/login")
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(body)
-        .retrieve()
-        .body(String.class);
+    final String resp;
+    try {
+      resp = http.post()
+          .uri(baseUrl + "/auth/login")
+          .contentType(MediaType.APPLICATION_JSON)
+          .accept(MediaType.APPLICATION_JSON)
+          .body(body)
+          .retrieve()
+          .body(String.class);
+    } catch (RestClientResponseException e) {
+      String eb = sanitize(e.getResponseBodyAsString());
+      throw new IllegalStateException(
+          "Login failed: HTTP " + e.getRawStatusCode() + " " + e.getStatusText()
+              + " — " + (eb == null ? "(empty body)" : eb));
+    } catch (RestClientException e) {
+      throw new IllegalStateException("I/O error on POST " + baseUrl + "/auth/login: " + e.getMessage(), e);
+    }
 
     String token = TokenUtils.extractAnyToken(resp);
     if (token == null) {
-      throw new IllegalStateException("Token not found in response: " + resp);
+      throw new IllegalStateException("Token not found in response: " + sanitize(resp));
     }
     return token;
   }
@@ -102,6 +126,13 @@ public class ObAuthClient {
       }
     } catch (Exception ignored) { }
     return 24 * 60 * 60; // дефолт на сутки
+  }
+
+  /** Убираем HTML/много пробелов и ограничиваем длину. */
+  private static String sanitize(String s) {
+    if (s == null || s.isBlank()) return null;
+    String noTags = s.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+    return noTags.length() > 400 ? noTags.substring(0, 400) + "…" : noTags;
   }
 
   private static final class TokenEntry {
