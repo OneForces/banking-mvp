@@ -2,18 +2,18 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title th:text="'Счета (' + ${bank.toUpperCase()} + 'Bank)'">Счета</title>
+  <title th:text="${'Счета (' + #strings.toUpperCase(bank != null ? bank : 'v') + 'Bank)'}">Счета</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; }
-    html,body { height: 100%; }
+    html,body { height:100%; }
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;
-           margin: 24px; line-height: 1.5; color: var(--fg); }
+           margin:24px; line-height:1.5; color:var(--fg); }
     header { display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; }
-    .muted { color: var(--muted); }
+    .muted { color:var(--muted); }
     .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin:18px 0; }
     .card { border:1px solid var(--line); border-radius:12px; padding:16px; }
-    .label { font-size:12px; color: var(--muted); }
+    .label { font-size:12px; color:var(--muted); }
     pre { background:#0b1021; color:#e8eaf6; padding:16px; border-radius:8px; overflow:auto; }
     .error { background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
     .info { background:#f6f8ff; border:1px solid #c9d1ff; color:#172554; padding:12px; border-radius:8px; }
@@ -28,21 +28,23 @@
 </head>
 <body>
 <header>
-  <h1>Счета <span th:text="${bank.toUpperCase()} + 'Bank'">VBank</span></h1>
-  <span class="muted" th:text="'(' + ${baseUrl} + ')'">https://vbank.open.bankingapi.ru</span>
+  <h1>
+    Счета <span th:text="${#strings.toUpperCase(bank != null ? bank : 'v')} + 'Bank'">VBank</span>
+  </h1>
+  <span class="muted" th:text="${'(' + (baseUrl != null ? baseUrl : '—') + ')'}">https://vbank.open.bankingapi.ru</span>
 </header>
 
 <div class="row">
-  <form class="inline" method="get" action="#" th:action="@{/accounts}">
+  <form class="inline" method="get" th:action="@{/accounts}">
     <label>Банк:
       <select name="bank">
-        <option value="v" th:selected="${bank}=='v'">VBank</option>
-        <option value="a" th:selected="${bank}=='a'">ABank</option>
-        <option value="s" th:selected="${bank}=='s'">SBank</option>
+        <option value="v" th:selected="${(bank != null ? bank : 'v') == 'v'}">VBank</option>
+        <option value="a" th:selected="${bank == 'a'}">ABank</option>
+        <option value="s" th:selected="${bank == 's'}">SBank</option>
       </select>
     </label>
     <label>Логин клиента:
-      <input type="text" name="login" th:value="${login}" placeholder="team101-1" required/>
+      <input type="text" name="login" th:value="${login} ?: ''" placeholder="team101-1" required/>
     </label>
     <button type="submit">Загрузить</button>
   </form>
@@ -58,11 +60,11 @@
   </div>
 </div>
 
-<!-- Инфо при ожидании одобрения -->
+<!-- Инфо при ожидании -->
 <div class="row info" th:if="${info}">
   <div th:text="${info}">Заявка на согласие отправлена…</div>
   <div style="margin-top:8px;" th:if="${consentId}">
-    <button id="check">Проверить снова</button>
+    <button id="check" type="button">Проверить снова</button>
     <span class="muted">Автообновление раз в 5 сек</span>
   </div>
 </div>
@@ -92,10 +94,9 @@
 
 <p class="row"><a href="/">⟵ На главную</a></p>
 
-<!-- JS: автопуллинг статуса согласия, если pending -->
 <script th:inline="javascript">
 /*<![CDATA[*/
-  const bank = /*[[${bank}]]*/ 'v';
+  const bank = /*[[${bank} ?: 'v']]*/ 'v';
   const consentId = /*[[${consentId}]]*/ null;
   const consentStatus = /*[[${consentStatus}]]*/ null;
 
@@ -104,15 +105,15 @@
     fetch(`/consents/${bank}/${consentId}/status`, {headers: {'Accept':'application/json'}})
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(j => {
-        if (j && j.status && j.status.toLowerCase() === 'approved') {
+        if (j && j.status && String(j.status).toLowerCase() === 'approved') {
           location.reload();
         }
       })
-      .catch(() => { /* молча, это вспомогательная функция */ });
+      .catch(() => {});
   }
 
   if (consentId && consentStatus && String(consentStatus).toLowerCase() === 'pending') {
-    setInterval(pollOnce, 5000); // автообновление раз в 5 сек
+    setInterval(pollOnce, 5000);
     const btn = document.getElementById('check');
     if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); pollOnce(); });
   }

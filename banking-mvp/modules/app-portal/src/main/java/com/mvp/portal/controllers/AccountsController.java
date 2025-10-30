@@ -1,4 +1,3 @@
-// modules/app-portal/src/main/java/com/mvp/portal/controllers/AccountsController.java
 package com.mvp.portal.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,7 +11,6 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,30 +60,27 @@ public class AccountsController {
 
       // 2) создаём согласие для клиента с контекстом нашего банка (teamId)
       ConsentCreateResult consent = accountsClient.createConsent(baseUrl, token, clientId, teamId);
+
       String status = consent.getStatus();
+      String consentId = consent.getConsentId();
+
+      // всегда прокидываем оба поля в модель (иначе шаблон может «перепутать»)
       model.addAttribute("consentStatus", status);
+      model.addAttribute("consentId", consentId);
       model.addAttribute("consentRequestId", consent.getRequestId());
       model.addAttribute("consentAutoApproved", consent.isAutoApproved());
 
       // Если согласие не готово к использованию — показываем инфо и не идём за счетами.
-      // Покрываем pending/processing/и отсутствие consentId на всякий случай.
-      String consentId = consent.getConsentId();
-      boolean consentReady = StringUtils.hasText(consentId)
-          && "approved".equalsIgnoreCase(status); // при необходимости добавьте иные финальные статусы
+      boolean consentReady = StringUtils.hasText(consentId) && "approved".equalsIgnoreCase(status);
 
       if (!consentReady) {
         model.addAttribute("info",
             "Заявка на согласие отправлена и ожидает одобрения банка. "
                 + "request_id=" + (consent.getRequestId() == null ? "—" : consent.getRequestId()));
-        // Можно вывести consentId, если он уже есть, но статус ещё не финальный
-        if (StringUtils.hasText(consentId)) {
-          model.addAttribute("consentId", consentId);
-        }
         return "accounts/index";
       }
 
       // 3) согласие одобрено — тянем счета
-      model.addAttribute("consentId", consentId);
       try {
         String accountsJson = accountsClient.getAccounts(baseUrl, token, clientId, consentId, teamId);
         model.addAttribute("accountsJson", accountsJson);
@@ -94,11 +89,9 @@ public class AccountsController {
         if (!accounts.isEmpty()) {
           model.addAttribute("accounts", accounts);
         }
-      } catch (RestClientResponseException httpEx) {
-        // дружелюбная ошибка с кодом статуса
-        model.addAttribute("error",
-            "Accounts fetch failed: HTTP " + httpEx.getRawStatusCode() + " " + httpEx.getStatusText());
-        model.addAttribute("apiErrorBody", httpEx.getResponseBodyAsString());
+      } catch (ObAccountsClient.ObApiException apiEx) {
+        model.addAttribute("error", "Accounts fetch failed: HTTP " + apiEx.getStatus().value());
+        model.addAttribute("apiErrorBody", apiEx.getResponseBody());
       }
 
     } catch (Exception e) {

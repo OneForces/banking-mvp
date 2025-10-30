@@ -14,23 +14,63 @@
   <name>app-portal</name>
   <packaging>jar</packaging>
 
+  <!-- Репозитории — основной + резервный -->
+  <repositories>
+    <repository>
+      <id>central</id>
+      <name>Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>central-backup</id>
+      <name>Maven Central (backup URL)</name>
+      <url>https://repo1.maven.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+        <updatePolicy>always</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>central-plugins</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <!-- делаем стабильное имя файла -->
   <build>
     <finalName>app-portal</finalName>
     <plugins>
-      <!-- Собираем обычный JAR (исходный), его потом перезапакует spring-boot -->
+      <!-- Сначала обычный JAR; затем spring-boot его перепакует -->
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <version>3.3.0</version>
-        <configuration>
-          <!-- без classifier'ов, чтобы spring-boot сделал единый app-portal.jar -->
-        </configuration>
       </plugin>
 
-      <!-- Делаем исполняемый Spring Boot JAR (с Main-Class и лаунчером) -->
+      <!-- Исполняемый Spring Boot JAR -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <!-- Кладём внутрь зависимость, которая падала при разрешении -->
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <goals>
@@ -55,14 +95,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-thymeleaf</artifactId>
     </dependency>
-
-    <!-- опционально: actuator для healthcheck -->
-    <!--
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
-    -->
 
     <!-- @ConfigurationProperties metadata (dev-only) -->
     <dependency>
