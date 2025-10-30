@@ -35,35 +35,34 @@
   </div>
 
   <!-- Ошибка верхнего уровня -->
-  <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+  <div class="row error" th:if="${error != null}" th:text="${error}">Ошибка</div>
 
   <!-- Блок деталей счёта -->
-  <div class="row" th:if="${account}">
+  <div class="row" th:if="${account != null}">
     <div class="label">Детали</div>
-    <!-- Было: #objects.toString(account) -->
     <pre th:text="${account}">—</pre>
   </div>
 
   <!-- Блок балансов -->
-  <div class="row" th:if="${balances}">
+  <div class="row" th:if="${balances != null}">
     <div class="label">Балансы</div>
-    <!-- Было: #objects.toString(balances) -->
     <pre th:text="${balances}">—</pre>
   </div>
 
   <!-- Сырые ответы API (если прокидываются как строки JSON) -->
-  <div class="row" th:if="${accountJson}">
+  <div class="row" th:if="${accountJson != null}">
     <div class="label">Ответ API (account)</div>
     <pre th:text="${accountJson}">—</pre>
   </div>
-  <div class="row" th:if="${balancesJson}">
+  <div class="row" th:if="${balancesJson != null}">
     <div class="label">Ответ API (balances)</div>
     <pre th:text="${balancesJson}">—</pre>
   </div>
 
   <!-- Навигация -->
   <p class="row" th:if="${accountId != null and bank != null and consentId != null}">
-    <a class="btn" th:href="@{|/accounts/${accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
+    <a class="btn"
+       th:href="@{|/accounts/${accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
       История транзакций →
     </a>
   </p>
