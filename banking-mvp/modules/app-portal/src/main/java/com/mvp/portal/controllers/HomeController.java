@@ -23,9 +23,9 @@ public class HomeController {
         return "index";
     }
 
-    /** Универсальный health: /health/v, /health/a, /health/s */
+    /** Универсальный health: /health/v, /health/a, /health/s и полные /health/vbank и т.п. */
     @GetMapping("/health/{bank}")
-    public ResponseEntity<?> health(@PathVariable String bank) {
+    public ResponseEntity<?> health(@PathVariable("bank") String bank) {
         String baseUrl = switch (bank.toLowerCase()) {
             case "a", "abank" -> nullToEmpty(props.getAbankBaseUrl());
             case "s", "sbank" -> nullToEmpty(props.getSbankBaseUrl());
@@ -33,10 +33,10 @@ public class HomeController {
             default -> "";
         };
         return ResponseEntity.ok(Map.of(
-                "bank", bank,
-                "baseUrl", baseUrl,
-                "clientIdSet", hasText(props.getClientId()),
-                "clientSecretSet", hasText(props.getClientSecret())
+            "bank", bank,
+            "baseUrl", baseUrl,
+            "clientIdSet", hasText(props.getClientId()),
+            "clientSecretSet", hasText(props.getClientSecret())
         ));
     }
 
@@ -44,9 +44,30 @@ public class HomeController {
     @GetMapping("/health/vbank")
     public ResponseEntity<?> healthVbank() {
         return ResponseEntity.ok(Map.of(
-                "vbankBaseUrl", nullToEmpty(props.getVbankBaseUrl()),
-                "clientIdSet", hasText(props.getClientId()),
-                "clientSecretSet", hasText(props.getClientSecret())
+            "bank", "vbank",
+            "baseUrl", nullToEmpty(props.getVbankBaseUrl()),
+            "clientIdSet", hasText(props.getClientId()),
+            "clientSecretSet", hasText(props.getClientSecret())
+        ));
+    }
+
+    @GetMapping("/health/abank")
+    public ResponseEntity<?> healthAbank() {
+        return ResponseEntity.ok(Map.of(
+            "bank", "abank",
+            "baseUrl", nullToEmpty(props.getAbankBaseUrl()),
+            "clientIdSet", hasText(props.getClientId()),
+            "clientSecretSet", hasText(props.getClientSecret())
+        ));
+    }
+
+    @GetMapping("/health/sbank")
+    public ResponseEntity<?> healthSbank() {
+        return ResponseEntity.ok(Map.of(
+            "bank", "sbank",
+            "baseUrl", nullToEmpty(props.getSbankBaseUrl()),
+            "clientIdSet", hasText(props.getClientId()),
+            "clientSecretSet", hasText(props.getClientSecret())
         ));
     }
 
@@ -54,11 +75,11 @@ public class HomeController {
     @GetMapping("/health")
     public ResponseEntity<?> healthAll() {
         return ResponseEntity.ok(Map.of(
-                "vbankBaseUrl", nullToEmpty(props.getVbankBaseUrl()),
-                "abankBaseUrl", nullToEmpty(props.getAbankBaseUrl()),
-                "sbankBaseUrl", nullToEmpty(props.getSbankBaseUrl()),
-                "clientIdSet", hasText(props.getClientId()),
-                "clientSecretSet", hasText(props.getClientSecret())
+            "vbankBaseUrl", nullToEmpty(props.getVbankBaseUrl()),
+            "abankBaseUrl", nullToEmpty(props.getAbankBaseUrl()),
+            "sbankBaseUrl", nullToEmpty(props.getSbankBaseUrl()),
+            "clientIdSet", hasText(props.getClientId()),
+            "clientSecretSet", hasText(props.getClientSecret())
         ));
     }
 

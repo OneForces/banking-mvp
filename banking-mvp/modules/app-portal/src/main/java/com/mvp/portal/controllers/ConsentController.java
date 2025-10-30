@@ -36,7 +36,8 @@ public class ConsentController {
    * Ответ: {"status":"approved|pending|rejected|unknown"}
    */
   @GetMapping("/consents/{bank}/{id}/status")
-  public ResponseEntity<String> status(@PathVariable String bank, @PathVariable String id) {
+  public ResponseEntity<String> status(@PathVariable("bank") String bank,
+                                       @PathVariable("id") String id) {
     if (!StringUtils.hasText(id)) {
       return okJson("{\"status\":\"unknown\"}");
     }

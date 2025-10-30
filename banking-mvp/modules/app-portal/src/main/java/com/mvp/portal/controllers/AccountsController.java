@@ -1,4 +1,3 @@
-// modules/app-portal/src/main/java/com/mvp/portal/controllers/AccountsController.java
 package com.mvp.portal.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -34,52 +33,37 @@ public class AccountsController {
     this.props = props;
   }
 
-  /**
-   * Страница: создать согласие и показать счета клиента.
-   * Пример: GET /accounts?bank=v&login=team101-1
-   *
-   * bank = v|a|s (по умолчанию v)
-   * login = client_id клиента (например, team101-1)
-   */
   @GetMapping("/accounts")
   public String list(@RequestParam(name = "bank", defaultValue = "v") String bank,
                      @RequestParam(name = "login") String customerLogin,
                      Model model) {
 
-    // базовые атрибуты для шаблона
     String baseUrl = resolveBaseUrl(bank);
     model.addAttribute("bank", bank.toLowerCase());
     model.addAttribute("baseUrl", baseUrl);
     model.addAttribute("login", customerLogin);
 
-    // ранняя валидация логина
     if (!StringUtils.hasText(customerLogin)) {
       model.addAttribute("error", "Login (client_id) не задан.");
       return "accounts/index";
     }
 
     try {
-      // идентификатор нашей команды/банка (для X-Requesting-Bank)
       String requestingBank = props.getClientId();
-      // клиент, для которого запрашиваем доступ
       String clientId = customerLogin.trim();
 
-      // 1) Получаем bank-token по кредам команды
       String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
 
-      // 2) Создаём согласие
       ConsentCreateResult consent = accountsClient.createConsent(baseUrl, token, clientId, requestingBank);
 
       String status = consent.getStatus();
       String consentId = consent.getConsentId();
 
-      // Всегда прокидываем в модель — шаблон использует для инфо/пуллинга
       model.addAttribute("consentStatus", status);
       model.addAttribute("consentId", consentId);
       model.addAttribute("consentRequestId", consent.getRequestId());
       model.addAttribute("consentAutoApproved", consent.isAutoApproved());
 
-      // Если согласие не approved — показываем инфо и не запрашиваем счета
       boolean consentReady = StringUtils.hasText(consentId) && "approved".equalsIgnoreCase(status);
       if (!consentReady) {
         model.addAttribute(
@@ -90,7 +74,6 @@ public class AccountsController {
         return "accounts/index";
       }
 
-      // 3) Согласие одобрено — тянем счета
       try {
         String accountsJson = accountsClient.getAccounts(baseUrl, token, clientId, consentId, requestingBank);
         model.addAttribute("accountsJson", accountsJson);
@@ -113,7 +96,7 @@ public class AccountsController {
 
   /** Детали счёта + балансы по известным accountId и consentId. */
   @GetMapping("/accounts/{accountId}")
-  public String details(@PathVariable String accountId,
+  public String details(@PathVariable("accountId") String accountId,
                         @RequestParam(name = "bank", defaultValue = "v") String bank,
                         @RequestParam(name = "consentId") String consentId,
                         @RequestParam(name = "login", required = false) String login,
@@ -146,7 +129,7 @@ public class AccountsController {
 
   /** История транзакций по счёту. Даты from/to опциональны (YYYY-MM-DD). */
   @GetMapping("/accounts/{accountId}/transactions")
-  public String transactions(@PathVariable String accountId,
+  public String transactions(@PathVariable("accountId") String accountId,
                              @RequestParam(name = "bank", defaultValue = "v") String bank,
                              @RequestParam(name = "consentId") String consentId,
                              @RequestParam(name = "login", required = false) String login,
