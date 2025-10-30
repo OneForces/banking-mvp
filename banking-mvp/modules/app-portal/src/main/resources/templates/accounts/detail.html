@@ -2,7 +2,7 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title th:text="'Счёт ' + (${accountId} ?: '—')">Счёт</title>
+  <title th:text="'Счёт ' + (${accountId ?: '—'})">Счёт</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; --info:#172554; --bginfo:#f6f8ff; }
@@ -23,15 +23,15 @@
 <body>
   <h1>
     <span class="label">Счёт:</span>
-    <span th:text="${accountId} ?: '—'">—</span>
+    <span th:text="${accountId ?: '—'}">—</span>
   </h1>
-  <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
+  <div class="muted" th:text="${baseUrl ?: '—'}">—</div>
 
   <!-- Шапка с параметрами контекста -->
   <div class="row kv">
-    <div><span class="label">Банк:</span> <code class="k" th:text="${bank} ?: 'v'">v</code></div>
-    <div><span class="label">Логин клиента:</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
-    <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId} ?: '—'">—</code></div>
+    <div><span class="label">Банк:</span> <code class="k" th:text="${bank ?: 'v'}">v</code></div>
+    <div><span class="label">Логин клиента:</span> <code class="k" th:text="${login ?: '—'}">—</code></div>
+    <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId ?: '—'}">—</code></div>
   </div>
 
   <!-- Ошибка верхнего уровня -->
@@ -49,7 +49,7 @@
     <pre th:text="${#objects.toString(balances)}">—</pre>
   </div>
 
-  <!-- Сырые ответы API (если захочешь прокидывать как строки JSON) -->
+  <!-- Сырые ответы API (если прокидываются как строки JSON) -->
   <div class="row" th:if="${accountJson}">
     <div class="label">Ответ API (account)</div>
     <pre th:text="${accountJson}">—</pre>
@@ -60,7 +60,7 @@
   </div>
 
   <!-- Навигация -->
-  <p class="row" th:if="${accountId} and ${bank} and ${consentId}">
+  <p class="row" th:if="${accountId != null and bank != null and consentId != null}">
     <a class="btn" th:href="@{|/accounts/${accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
       История транзакций →
     </a>
