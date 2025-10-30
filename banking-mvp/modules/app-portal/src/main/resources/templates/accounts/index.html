@@ -78,26 +78,26 @@
 <!-- Карточки счетов -->
 <div class="grid" th:if="${accounts}">
   <div class="card" th:each="acc : ${accounts}">
-    <div class="label" th:text="${acc.accountType != null ? acc.accountType : '—'}">type</div>
-    <h3 th:text="${acc.accountName != null ? acc.accountName : 'Без названия'}">Название счета</h3>
+    <div class="label" th:text="${acc['accountType'] != null ? acc['accountType'] : '—'}">type</div>
+    <h3 th:text="${acc['accountName'] != null ? acc['accountName'] : 'Без названия'}">Название счета</h3>
 
-    <div><span class="label">ID:</span> <code th:text="${acc.accountId}">acc-id</code></div>
-    <div><span class="label">Номер:</span> <span th:text="${acc.accountNumber != null ? acc.accountNumber : '—'}">—</span></div>
-    <div><span class="label">Валюта:</span> <span th:text="${acc.currency != null ? acc.currency : '—'}">RUB</span></div>
-    <div><span class="label">Статус:</span> <span th:text="${acc.status != null ? acc.status : '—'}">active</span></div>
+    <div><span class="label">ID:</span> <code th:text="${acc['accountId']}">acc-id</code></div>
+    <div><span class="label">Номер:</span> <span th:text="${acc['accountNumber'] != null ? acc['accountNumber'] : '—'}">—</span></div>
+    <div><span class="label">Валюта:</span> <span th:text="${acc['currency'] != null ? acc['currency'] : '—'}">RUB</span></div>
+    <div><span class="label">Статус:</span> <span th:text="${acc['status'] != null ? acc['status'] : '—'}">active</span></div>
 
     <!-- Действия по счёту -->
-    <div class="row actions" th:if="${consentId}">
+    <div class="row actions" th:if="${consentId != null}">
       <a class="btn"
-         th:href="@{|/accounts/${acc.accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">
+         th:href="@{|/accounts/${acc['accountId']}?bank=${bank}&consentId=${consentId}&login=${login}|}">
         Детали и баланс →
       </a>
       <a class="btn secondary"
-         th:href="@{|/accounts/${acc.accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
+         th:href="@{|/accounts/${acc['accountId']}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
         Транзакции →
       </a>
     </div>
-    <div class="row muted" th:if="${!consentId}">
+    <div class="row muted" th:if="${consentId == null}">
       Для перехода к деталям требуется согласие (consent_id).
     </div>
   </div>
@@ -115,7 +115,7 @@
 
 <script th:inline="javascript">
 /*<![CDATA[*/
-  const bank = /*[[${(bank != null ? bank : 'v')}]]*/ 'v';
+  const bank = /*[[${bank != null ? bank : 'v'}]]*/ 'v';
   const consentId = /*[[${consentId}]]*/ null;
   const consentStatus = /*[[${consentStatus}]]*/ null;
 
