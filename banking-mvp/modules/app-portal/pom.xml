@@ -1,0 +1,81 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.mvp</groupId>
+    <artifactId>banking-mvp</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>app-portal</artifactId>
+  <name>app-portal</name>
+  <packaging>jar</packaging>
+
+  <!-- делаем стабильное имя файла -->
+  <build>
+    <finalName>app-portal</finalName>
+    <plugins>
+      <!-- Собираем обычный JAR (исходный), его потом перезапакует spring-boot -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <!-- без classifier'ов, чтобы spring-boot сделал единый app-portal.jar -->
+        </configuration>
+      </plugin>
+
+      <!-- Делаем исполняемый Spring Boot JAR (с Main-Class и лаунчером) -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+        <!-- mainClass можно не указывать — плагин найдёт @SpringBootApplication -->
+      </plugin>
+    </plugins>
+  </build>
+
+  <dependencies>
+    <!-- Web + MVC -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Thymeleaf -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+    <!-- опционально: actuator для healthcheck -->
+    <!--
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    -->
+
+    <!-- @ConfigurationProperties metadata (dev-only) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- наш модуль с клиентами -->
+    <dependency>
+      <groupId>com.mvp</groupId>
+      <artifactId>ob-client</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+</project>

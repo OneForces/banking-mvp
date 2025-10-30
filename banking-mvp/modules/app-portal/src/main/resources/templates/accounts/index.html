@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Счета (' + ${bank.toUpperCase()} + 'Bank)'">Счета</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; }
+    html,body { height: 100%; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial;
+           margin: 24px; line-height: 1.5; color: var(--fg); }
+    header { display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; }
+    .muted { color: var(--muted); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin:18px 0; }
+    .card { border:1px solid var(--line); border-radius:12px; padding:16px; }
+    .label { font-size:12px; color: var(--muted); }
+    pre { background:#0b1021; color:#e8eaf6; padding:16px; border-radius:8px; overflow:auto; }
+    .error { background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
+    .info { background:#f6f8ff; border:1px solid #c9d1ff; color:#172554; padding:12px; border-radius:8px; }
+    .row { margin:12px 0; }
+    form.inline { display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input[type=text], select { padding:6px 8px; border:1px solid #ddd; border-radius:8px; }
+    button { padding:6px 10px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; cursor:pointer; }
+    code.k { padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+    .kv { display:flex; gap:8px; flex-wrap:wrap; }
+    .kv > div { min-width:220px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Счета <span th:text="${bank.toUpperCase()} + 'Bank'">VBank</span></h1>
+  <span class="muted" th:text="'(' + ${baseUrl} + ')'">https://vbank.open.bankingapi.ru</span>
+</header>
+
+<div class="row">
+  <form class="inline" method="get" action="#" th:action="@{/accounts}">
+    <label>Банк:
+      <select name="bank">
+        <option value="v" th:selected="${bank}=='v'">VBank</option>
+        <option value="a" th:selected="${bank}=='a'">ABank</option>
+        <option value="s" th:selected="${bank}=='s'">SBank</option>
+      </select>
+    </label>
+    <label>Логин клиента:
+      <input type="text" name="login" th:value="${login}" placeholder="team101-1" required/>
+    </label>
+    <button type="submit">Загрузить</button>
+  </form>
+</div>
+
+<!-- Блок сведений о согласии -->
+<div class="row kv" th:if="${consentStatus} or ${consentId} or ${consentRequestId}">
+  <div><span class="label">Согласие (status):</span> <code class="k" th:text="${consentStatus} ?: '—'">—</code></div>
+  <div th:if="${consentId}"><span class="label">Consent ID:</span> <code class="k" th:text="${consentId}">—</code></div>
+  <div th:if="${consentRequestId}"><span class="label">Request ID:</span> <code class="k" th:text="${consentRequestId}">—</code></div>
+  <div th:if="${consentAutoApproved != null}">
+    <span class="label">Auto-approved:</span> <code class="k" th:text="${consentAutoApproved} ? 'yes' : 'no'">no</code>
+  </div>
+</div>
+
+<!-- Инфо при ожидании одобрения -->
+<div class="row info" th:if="${info}">
+  <div th:text="${info}">Заявка на согласие отправлена…</div>
+  <div style="margin-top:8px;" th:if="${consentId}">
+    <button id="check">Проверить снова</button>
+    <span class="muted">Автообновление раз в 5 сек</span>
+  </div>
+</div>
+
+<!-- Ошибка верхнего уровня -->
+<div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+
+<!-- Карточки счетов -->
+<div class="grid" th:if="${accounts}">
+  <div class="card" th:each="acc : ${accounts}">
+    <div class="label" th:text="${acc.accountType} ?: '—'">type</div>
+    <h3 th:text="${acc.accountName} ?: 'Без названия'">Название счета</h3>
+    <div><span class="label">ID:</span> <code th:text="${acc.accountId}">acc-id</code></div>
+    <div><span class="label">Номер:</span> <span th:text="${acc.accountNumber} ?: '—'">—</span></div>
+    <div><span class="label">Валюта:</span> <span th:text="${acc.currency} ?: '—'">RUB</span></div>
+    <div><span class="label">Статус:</span> <span th:text="${acc.status} ?: '—'">active</span></div>
+  </div>
+</div>
+
+<!-- Сырый ответ API -->
+<h3 class="row" th:if="${accountsJson}">Ответ API</h3>
+<pre class="row" th:if="${accountsJson}" th:text="${accountsJson}">Загрузка…</pre>
+
+<!-- Тело ошибки API (если было) -->
+<h3 class="row" th:if="${apiErrorBody}">Тело ошибки API</h3>
+<pre class="row" th:if="${apiErrorBody}" th:text="${apiErrorBody}"></pre>
+
+<p class="row"><a href="/">⟵ На главную</a></p>
+
+<!-- JS: автопуллинг статуса согласия, если pending -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+  const bank = /*[[${bank}]]*/ 'v';
+  const consentId = /*[[${consentId}]]*/ null;
+  const consentStatus = /*[[${consentStatus}]]*/ null;
+
+  function pollOnce() {
+    if (!consentId) return;
+    fetch(`/consents/${bank}/${consentId}/status`, {headers: {'Accept':'application/json'}})
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(j => {
+        if (j && j.status && j.status.toLowerCase() === 'approved') {
+          location.reload();
+        }
+      })
+      .catch(() => { /* молча, это вспомогательная функция */ });
+  }
+
+  if (consentId && consentStatus && String(consentStatus).toLowerCase() === 'pending') {
+    setInterval(pollOnce, 5000); // автообновление раз в 5 сек
+    const btn = document.getElementById('check');
+    if (btn) btn.addEventListener('click', (e) => { e.preventDefault(); pollOnce(); });
+  }
+/*]]>*/
+</script>
+</body>
+</html>

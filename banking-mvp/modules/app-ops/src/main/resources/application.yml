@@ -1,0 +1,8 @@
+server:
+  port: 8080
+app:
+  vbankBaseUrl: ${V_BANK_BASE_URL}
+  abankBaseUrl: ${A_BANK_BASE_URL}
+  sbankBaseUrl: ${S_BANK_BASE_URL}
+  username: ${SANDBOX_USERNAME}
+  password: ${SANDBOX_PASSWORD}

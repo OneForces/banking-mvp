@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Счета (' + ${bank.toUpperCase()} + 'Bank)'">Счета</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji"; margin: 24px; line-height: 1.5; }
+    header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+    .muted { color: #666; }
+    .chips a { display: inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid #ddd; text-decoration: none; color: #222; margin-right: 6px; }
+    .chips a.active { background: #111; color: #fff; border-color: #111; }
+    pre { background: #0b1021; color: #e8eaf6; padding: 16px; border-radius: 8px; overflow: auto; }
+    .error { background: #fff3f3; border: 1px solid #f5c2c2; color: #9f1a1a; padding: 12px; border-radius: 8px; }
+    .row { margin: 12px 0; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Счета <span th:text="${bank.toUpperCase()} + 'Bank'">VBank</span></h1>
+  <span class="muted" th:text="'(' + ${baseUrl} + ')'">https://vbank.open.bankingapi.ru</span>
+</header>
+
+<div class="row chips">
+  <a th:href="@{/accounts(bank='v')}" th:classappend="${bank}=='v' ? ' active' : ''">VBank</a>
+  <a th:href="@{/accounts(bank='a')}" th:classappend="${bank}=='a' ? ' active' : ''">ABank</a>
+  <a th:href="@{/accounts(bank='s')}" th:classappend="${bank}=='s' ? ' active' : ''">SBank</a>
+  <a th:href="@{/accounts.json(bank=${bank})}" title="JSON API">/accounts.json</a>
+</div>
+
+<div th:if="${error}" class="row error" th:text="${error}">
+  Произошла ошибка загрузки счетов
+</div>
+
+<div class="row" th:if="${consentId}">
+  <div class="muted">Consent ID: <code th:text="${consentId}">consent-xxx</code></div>
+</div>
+
+<div class="row" th:if="${accountsJson}">
+  <h3>Ответ API (accounts)</h3>
+  <pre id="pretty">Загрузка…</pre>
+</div>
+
+<p class="row"><a href="/">⟵ На главную</a></p>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+  (function () {
+    var raw = /*[[${accountsJson}]]*/ null;
+    var el = document.getElementById('pretty');
+    try {
+      if (typeof raw === 'string') {
+        el.textContent = JSON.stringify(JSON.parse(raw), null, 2);
+      } else if (raw) {
+        el.textContent = JSON.stringify(raw, null, 2);
+      } else {
+        el.textContent = 'Пустой ответ.';
+      }
+    } catch (e) {
+      el.textContent = (typeof raw === 'string' ? raw : String(raw));
+    }
+  })();
+/*]]>*/
+</script>
+</body>
+</html>

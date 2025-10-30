@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "app",
+      "type": "com.mvp.ob.ObClientProperties",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.abank-base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    },
+    {
+      "name": "app.client-id",
+      "type": "java.lang.String",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    },
+    {
+      "name": "app.client-secret",
+      "type": "java.lang.String",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    },
+    {
+      "name": "app.sbank-base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    },
+    {
+      "name": "app.vbank-base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.mvp.ob.ObClientProperties"
+    }
+  ],
+  "hints": []
+}

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Онлайн-банк: кредит и вклад</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Arial; margin: 24px; line-height: 1.5; }
+    .row { margin: 12px 0; }
+    .inline { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input, select, button, a.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; font: inherit; }
+    button, a.btn { background:#111; color:#fff; text-decoration:none; border-color:#111; cursor:pointer; }
+    a.link { text-decoration: none; color: #0a58ca; }
+  </style>
+</head>
+<body>
+<h1>Онлайн-банк: кредит и вклад</h1>
+<p>Стартовый скелет приложения на Spring Boot.</p>
+
+<div class="row">
+  <a class="link" href="/health/vbank" target="_blank">Проверить доступ к VBank</a>
+</div>
+
+<div class="row">
+  <a class="link" href="/deposit/products">Посмотреть продукты (вклады/кредиты) из VBank</a>
+</div>
+
+<hr class="row"/>
+
+<div class="row">
+  <form class="inline" method="get" action="/accounts">
+    <label for="bank">Банк:</label>
+    <select id="bank" name="bank">
+      <option value="v">VBank</option>
+      <option value="a">ABank</option>
+      <option value="s">SBank</option>
+    </select>
+
+    <label for="login">Логин клиента:</label>
+    <input id="login" name="login" type="text" value="team101-1" placeholder="client_id клиента"/>
+
+    <button type="submit">Счета клиента</button>
+  </form>
+</div>
+</body>
+</html>

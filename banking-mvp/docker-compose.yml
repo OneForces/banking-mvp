@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: banking-db
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    container_name: banking-mvp
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      # твои переменные — без переименований
+      V_BANK_BASE_URL: ${V_BANK_BASE_URL}
+      A_BANK_BASE_URL: ${A_BANK_BASE_URL}
+      S_BANK_BASE_URL: ${S_BANK_BASE_URL}
+      SANDBOX_CLIENT_ID: ${SANDBOX_CLIENT_ID}
+      SANDBOX_CLIENT_SECRET: ${SANDBOX_CLIENT_SECRET}
+
+      # опционально, если нужно:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-sandbox}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}

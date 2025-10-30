@@ -1,0 +1,28 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><title>Межбанковский перевод</title></head>
+<body>
+<h1>Межбанковский перевод</h1>
+<form method="post" th:action="@{/payments/interbank}">
+  <label>Банк: <select name="bank">
+    <option value="v">VBank</option><option value="a">ABank</option><option value="s">SBank</option>
+  </select></label><br>
+  <label>From IBAN: <input name="fromIban" required></label><br>
+  <label>To IBAN: <input name="toIban" required></label><br>
+  <label>Amount: <input type="number" step="0.01" name="amount" required></label><br>
+  <label>Currency: <input name="currency" value="RUB" required></label><br>
+  <label>Purpose: <input name="purpose" maxlength="140"></label><br>
+  <button type="submit">Отправить</button>
+</form>
+
+<div th:if="${paymentId}">
+  <h3>Платёж создан</h3>
+  <p>payment_id: <span th:text="${paymentId}"></span></p>
+</div>
+
+<div th:if="${error}">
+  <h3 style="color:#b00020" th:text="${error}"></h3>
+  <pre th:text="${apiErrorBody}"></pre>
+</div>
+</body>
+</html>

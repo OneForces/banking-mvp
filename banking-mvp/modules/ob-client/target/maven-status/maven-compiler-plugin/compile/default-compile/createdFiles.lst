@@ -1,0 +1,12 @@
+META-INF/spring-configuration-metadata.json
+com/mvp/ob/TokenUtils.class
+com/mvp/ob/ObClientProperties.class
+com/mvp/ob/ObAgreementsClient.class
+com/mvp/ob/Product.class
+com/mvp/ob/ObAuthClient.class
+com/mvp/ob/ObClientAutoConfiguration.class
+com/mvp/ob/ObAuthClient$TokenEntry.class
+com/mvp/ob/ObPaymentsClient.class
+com/mvp/ob/ObAccountsClient.class
+com/mvp/ob/ObProductsClient.class
+com/mvp/ob/ConsentCreateResult.class

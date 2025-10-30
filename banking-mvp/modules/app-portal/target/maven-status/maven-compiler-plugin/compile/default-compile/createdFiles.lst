@@ -1,0 +1,7 @@
+com/mvp/portal/controllers/HomeController.class
+com/mvp/portal/controllers/AccountsController.class
+com/mvp/portal/controllers/DepositController$ProductView.class
+com/mvp/portal/PortalApplication.class
+com/mvp/portal/controllers/LoanController.class
+com/mvp/portal/config/WebConfig.class
+com/mvp/portal/controllers/DepositController.class

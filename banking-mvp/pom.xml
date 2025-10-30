@@ -1,0 +1,87 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.mvp</groupId>
+    <artifactId>banking-mvp</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!-- все наши подпроекты -->
+    <modules>
+        <module>modules/common</module>
+        <module>modules/ob-client</module>
+        <module>modules/ai-kyc</module>
+        <module>modules/core-domain</module>
+        <module>modules/app-portal</module>
+        <module>modules/app-ops</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+
+        <!-- чтобы всё собиралось в UTF-8 -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <!-- версию Spring Boot мы будем раздавать через dependencyManagement -->
+        <spring.boot.version>3.3.4</spring.boot.version>
+
+        <!-- пусть Maven сам не пытается за нас влезать со старыми плагинами -->
+        <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
+        <spring.boot.maven.plugin.version>${spring.boot.version}</spring.boot.maven.plugin.version>
+    </properties>
+
+    <!-- dependencyManagement:
+         даёт общую версию spring-boot-starter-* всем модулям,
+         но сами зависимости подключаются уже в дочерних pom.xml -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- pluginManagement:
+         объявляем версии плагинов, чтобы дочерние модули их наследовали
+         и нам не пришлось повторяться в каждом -->
+    <build>
+        <pluginManagement>
+            <plugins>
+
+                <!-- Java 17 компилятор -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
+                    <configuration>
+                        <source>${maven.compiler.source}</source>
+                        <target>${maven.compiler.target}</target>
+                        <release>${java.version}</release>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+
+                <!-- Spring Boot Maven Plugin:
+                     нужен модулям-приложениям (app-portal, app-ops)
+                     для spring-boot:run и для упаковки jar -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring.boot.maven.plugin.version}</version>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
+
+</project>

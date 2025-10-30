@@ -1,0 +1,10 @@
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ConsentCreateResult.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObAccountsClient.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObAgreementsClient.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObAuthClient.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObClientAutoConfiguration.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObClientProperties.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObPaymentsClient.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/ObProductsClient.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/Product.java
+/ws/modules/ob-client/src/main/java/com/mvp/ob/TokenUtils.java

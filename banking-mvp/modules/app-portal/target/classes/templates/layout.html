@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><title th:text="${title}">Banking MVP</title></head>
+<body>
+<nav>
+  <a href="/">Главная</a> |
+  <a href="/loan/new">Кредит</a> |
+  <a href="/deposit/products">Вклад</a>
+</nav>
+<hr>
+<div th:insert="${content}">[content]</div>
+</body></html>

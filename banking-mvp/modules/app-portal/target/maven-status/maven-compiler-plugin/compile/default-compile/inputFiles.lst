@@ -1,0 +1,6 @@
+/ws/modules/app-portal/src/main/java/com/mvp/portal/PortalApplication.java
+/ws/modules/app-portal/src/main/java/com/mvp/portal/config/WebConfig.java
+/ws/modules/app-portal/src/main/java/com/mvp/portal/controllers/AccountsController.java
+/ws/modules/app-portal/src/main/java/com/mvp/portal/controllers/DepositController.java
+/ws/modules/app-portal/src/main/java/com/mvp/portal/controllers/HomeController.java
+/ws/modules/app-portal/src/main/java/com/mvp/portal/controllers/LoanController.java

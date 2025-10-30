@@ -1,0 +1,3 @@
+/ws/modules/core-domain/src/main/java/com/mvp/core/DepositFlowService.java
+/ws/modules/core-domain/src/main/java/com/mvp/core/InterbankService.java
+/ws/modules/core-domain/src/main/java/com/mvp/core/LoanFlowService.java
