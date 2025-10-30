@@ -24,6 +24,9 @@
     code.k { padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
     .kv { display:flex; gap:8px; flex-wrap:wrap; }
     .kv > div { min-width:220px; }
+    .actions a { display:inline-block; margin-right:8px; text-decoration:none; }
+    .actions a.btn { padding:6px 10px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; }
+    .actions a.btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
   </style>
 </head>
 <body>
@@ -77,10 +80,26 @@
   <div class="card" th:each="acc : ${accounts}">
     <div class="label" th:text="${acc.accountType != null ? acc.accountType : '—'}">type</div>
     <h3 th:text="${acc.accountName != null ? acc.accountName : 'Без названия'}">Название счета</h3>
+
     <div><span class="label">ID:</span> <code th:text="${acc.accountId}">acc-id</code></div>
     <div><span class="label">Номер:</span> <span th:text="${acc.accountNumber != null ? acc.accountNumber : '—'}">—</span></div>
     <div><span class="label">Валюта:</span> <span th:text="${acc.currency != null ? acc.currency : '—'}">RUB</span></div>
     <div><span class="label">Статус:</span> <span th:text="${acc.status != null ? acc.status : '—'}">active</span></div>
+
+    <!-- Действия по счёту -->
+    <div class="row actions" th:if="${consentId}">
+      <a class="btn"
+         th:href="@{|/accounts/${acc.accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">
+        Детали и баланс →
+      </a>
+      <a class="btn secondary"
+         th:href="@{|/accounts/${acc.accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">
+        Транзакции →
+      </a>
+    </div>
+    <div class="row muted" th:if="${!consentId}">
+      Для перехода к деталям требуется согласие (consent_id).
+    </div>
   </div>
 </div>
 

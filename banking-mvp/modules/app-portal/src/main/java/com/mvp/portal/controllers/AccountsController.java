@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.ArrayList;
@@ -110,6 +111,80 @@ public class AccountsController {
     return "accounts/index";
   }
 
+  /** Детали счёта + балансы по известным accountId и consentId. */
+  @GetMapping("/accounts/{accountId}")
+  public String details(@PathVariable String accountId,
+                        @RequestParam(name = "bank", defaultValue = "v") String bank,
+                        @RequestParam(name = "consentId") String consentId,
+                        @RequestParam(name = "login", required = false) String login,
+                        Model model) {
+
+    String baseUrl = resolveBaseUrl(bank);
+    model.addAttribute("bank", bank.toLowerCase());
+    model.addAttribute("baseUrl", baseUrl);
+    model.addAttribute("accountId", accountId);
+    model.addAttribute("login", login);
+    model.addAttribute("consentId", consentId);
+
+    try {
+      String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
+      String requestingBank = props.getClientId();
+
+      String accJson = accountsClient.getAccountById(baseUrl, token, accountId, consentId, requestingBank);
+      String balJson = accountsClient.getAccountBalances(baseUrl, token, accountId, consentId, requestingBank);
+
+      model.addAttribute("account", safeToMap(accJson));
+      model.addAttribute("balances", safeToMap(balJson));
+    } catch (ObAccountsClient.ObApiException apiEx) {
+      model.addAttribute("error", "Account fetch failed: HTTP " + apiEx.getStatus().value());
+    } catch (Exception e) {
+      model.addAttribute("error", "Failed: " + e.getMessage());
+    }
+
+    return "accounts/details";
+  }
+
+  /** История транзакций по счёту. Даты from/to опциональны (YYYY-MM-DD). */
+  @GetMapping("/accounts/{accountId}/transactions")
+  public String transactions(@PathVariable String accountId,
+                             @RequestParam(name = "bank", defaultValue = "v") String bank,
+                             @RequestParam(name = "consentId") String consentId,
+                             @RequestParam(name = "login", required = false) String login,
+                             @RequestParam(name = "from", required = false) String from,
+                             @RequestParam(name = "to", required = false) String to,
+                             Model model) {
+
+    String baseUrl = resolveBaseUrl(bank);
+    model.addAttribute("bank", bank.toLowerCase());
+    model.addAttribute("baseUrl", baseUrl);
+    model.addAttribute("accountId", accountId);
+    model.addAttribute("login", login);
+    model.addAttribute("consentId", consentId);
+    model.addAttribute("from", from);
+    model.addAttribute("to", to);
+
+    try {
+      String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
+      String requestingBank = props.getClientId();
+
+      String txJson = accountsClient.getAccountTransactions(baseUrl, token, accountId, consentId, requestingBank, from, to);
+      model.addAttribute("transactionsJson", txJson);
+
+      List<Map<String, Object>> tx = extractTx(txJson);
+      if (!tx.isEmpty()) {
+        model.addAttribute("transactions", tx);
+      }
+    } catch (ObAccountsClient.ObApiException apiEx) {
+      model.addAttribute("error", "Transactions fetch failed: HTTP " + apiEx.getStatus().value());
+    } catch (Exception e) {
+      model.addAttribute("error", "Failed: " + e.getMessage());
+    }
+
+    return "accounts/transactions";
+  }
+
+  // ---------------- helpers ----------------
+
   private String resolveBaseUrl(String bank) {
     String b = bank == null ? "v" : bank.toLowerCase();
     return switch (b) {
@@ -124,9 +199,37 @@ public class AccountsController {
     try {
       JsonNode root = mapper.readTree(json);
       JsonNode arr = root.path("data").path("accounts");
-      if (!arr.isArray()) {
-        arr = root.path("data").path("account");
+      if (!arr.isArray()) arr = root.path("data").path("account");
+      if (!arr.isArray()) return List.of();
+
+      List<Map<String, Object>> out = new ArrayList<>();
+      for (JsonNode n : arr) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> m = mapper.convertValue(n, Map.class);
+        out.add(m);
       }
+      return out;
+    } catch (Exception e) {
+      return List.of();
+    }
+  }
+
+  private Map<String, Object> safeToMap(String json) {
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Object> m = mapper.readValue(json, Map.class);
+      return m;
+    } catch (Exception e) {
+      return Map.of("raw", json);
+    }
+  }
+
+  /** Ищем массив транзакций в ответе: data.transactions[] или data.transaction[]. */
+  private List<Map<String, Object>> extractTx(String json) {
+    try {
+      JsonNode root = mapper.readTree(json);
+      JsonNode arr = root.path("data").path("transactions");
+      if (!arr.isArray()) arr = root.path("data").path("transaction");
       if (!arr.isArray()) return List.of();
 
       List<Map<String, Object>> out = new ArrayList<>();
