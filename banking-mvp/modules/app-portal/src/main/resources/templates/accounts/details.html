@@ -40,13 +40,15 @@
   <!-- Блок деталей счёта -->
   <div class="row" th:if="${account}">
     <div class="label">Детали</div>
-    <pre th:text="${#objects.toString(account)}">—</pre>
+    <!-- Было: #objects.toString(account) -->
+    <pre th:text="${account}">—</pre>
   </div>
 
   <!-- Блок балансов -->
   <div class="row" th:if="${balances}">
     <div class="label">Балансы</div>
-    <pre th:text="${#objects.toString(balances)}">—</pre>
+    <!-- Было: #objects.toString(balances) -->
+    <pre th:text="${balances}">—</pre>
   </div>
 
   <!-- Сырые ответы API (если прокидываются как строки JSON) -->
