@@ -23,7 +23,7 @@
 </head>
 <body>
   <h1>Онлайн-банк · демо</h1>
-  <div class="muted">Скелет приложения на Spring Boot: согласие → счета → детали/балансы/транзакции; каталог продуктов.</div>
+  <div class="muted">Скелет приложения на Spring Boot: согласие, счета, <b>балансы</b>, транзакции; каталог продуктов.</div>
 
   <!-- Глобальный выбор банка -->
   <div class="row inline">
@@ -80,95 +80,108 @@
       </div>
     </div>
 
-    <!-- Детали счёта и транзакции -->
+    <!-- Детали / Балансы / Транзакции -->
     <div class="card">
-      <h3>Детали счёта и транзакции</h3>
-      <p class="muted">Быстрые ссылки на страницы «Детали» и «История» по известному <code>accountId</code> и <code>consentId</code>.</p>
-      <form class="inline" onsubmit="goAccount(event)">
-        <label for="accId">Account ID:</label>
-        <input id="accId" type="text" placeholder="acc-123" required/>
-        <label for="consId">Consent ID:</label>
-        <input id="consId" type="text" placeholder="consent-xyz" required/>
-        <button type="submit">Открыть детали</button>
-        <button type="button" class="btn secondary" onclick="goTx()">Открыть транзакции</button>
-      </form>
+      <h3>Детали счёта, <b>балансы</b> и транзакции</h3>
+      <p class="muted">Быстрые ссылки на страницы «Детали/Балансы» (в одной странице) и «История» по известному <code>accountId</code> и <code>consentId</code>.</p>
+      <div class="row inline">
+        <label>Account ID:</label>
+        <input id="acc-id" type="text" placeholder="acc-123" style="min-width:220px"/>
+      </div>
+      <div class="row inline">
+        <label>Consent ID:</label>
+        <input id="consent-id" type="text" placeholder="consent-xyz" style="min-width:220px"/>
+      </div>
+      <div class="row inline">
+        <a class="btn" id="acc-details" href="#">Открыть детали</a>
+        <a class="btn secondary" id="acc-balances" href="#">Открыть балансы</a>
+        <a class="btn secondary" id="acc-tx" href="#">Открыть транзакции</a>
+      </div>
       <div class="row muted">
-        Детали: <small class="k" id="account-hint">/accounts/{id}?bank=v&consentId=…</small><br/>
-        Транзакции: <small class="k" id="tx-hint">/accounts/{id}/transactions?bank=v&consentId=…</small>
+        Детали/Балансы: <small class="k" id="acc-details-hint">/accounts/{id}?bank=v&consentId=…</small>
+      </div>
+      <div class="row muted">
+        Транзакции: <small class="k" id="acc-tx-hint">/accounts/{id}/transactions?bank=v&consentId=…</small>
       </div>
     </div>
 
-    <!-- Отладка статуса согласия -->
+    <!-- Статус согласия (debug) -->
     <div class="card">
       <h3>Статус согласия (debug)</h3>
-      <p class="muted">Если у вас есть <code>consent_id</code>, этим GET можно проверить статус:</p>
-      <div class="row">
-        <small class="k">/consents/&lt;bank&gt;/&lt;consent_id&gt;/status</small>
-      </div>
+      <p class="muted">Если есть <code>consent_id</code>, этим GET можно проверить статус:</p>
+      <div class="row"><small class="k">/consents/&lt;bank&gt;/&lt;consent_id&gt;/status</small></div>
       <p class="muted">Пример: <a class="link" href="/consents/v/sample-consent/status" target="_blank">/consents/v/sample-consent/status</a></p>
     </div>
   </div>
 
   <div class="row muted">
-    Подсказка: логины тестовых клиентов отличаются между банками. Для SBank подходят демо-логины вида
-    <small class="k">demo-033</small>, <small class="k">demo-101</small> и т.п.
+    Подсказка: логины тестовых клиентов отличаются между банками.
+    Для SBank подходят демо-логины вида <small class="k">demo-033</small>, <small class="k">demo-101</small> и т.п.
   </div>
 
   <script>
-    // Единый переключатель банка: обновляет все ссылки и скрытое поле формы.
     const bankSel    = document.getElementById('bank');
     const bankHidden = document.getElementById('bank-hidden');
 
     const healthLink = document.getElementById('health-link');
     const healthHint = document.getElementById('health-hint');
 
-    const prodUi   = document.getElementById('products-ui');
-    const prodJson = document.getElementById('products-json');
-    const prodHint = document.getElementById('products-hint');
+    const prodUi  = document.getElementById('products-ui');
+    const prodJson= document.getElementById('products-json');
+    const prodHint= document.getElementById('products-hint');
 
-    const accHint  = document.getElementById('accounts-hint');
+    const accHint = document.getElementById('accounts-hint');
 
-    const accountHint = document.getElementById('account-hint');
-    const txHint      = document.getElementById('tx-hint');
+    const accIdInp    = document.getElementById('acc-id');
+    const consentInp  = document.getElementById('consent-id');
+    const accDetails  = document.getElementById('acc-details');
+    const accBalances = document.getElementById('acc-balances');
+    const accTx       = document.getElementById('acc-tx');
+    const accDetailsHint = document.getElementById('acc-details-hint');
+    const accTxHint      = document.getElementById('acc-tx-hint');
+
+    function url(originlessUrl){ return originlessUrl.replace(location.origin,''); }
 
     function applyBank(b) {
       // health
-      const healthMap = { v: '/health/vbank', a: '/health/abank', s: '/health/sbank' };
-      healthLink.href = healthMap[b] || '/health/vbank';
-      healthHint.textContent = healthLink.href.replace(location.origin, '');
+      const healthMap = { v:'/health/vbank', a:'/health/abank', s:'/health/sbank' };
+      healthLink.href   = healthMap[b] || '/health/vbank';
+      healthHint.textContent = url(healthLink.href);
 
       // products
       prodUi.href   = '/deposit/products?bank=' + b;
       prodJson.href = '/deposit/products.json?bank=' + b;
-      prodHint.textContent = prodUi.href.replace(location.origin, '');
+      prodHint.textContent = url(prodUi.href);
 
       // accounts form
       bankHidden.value = b;
       accHint.textContent = '/accounts?bank=' + b + '&login=…';
 
-      // account details/tx hints
-      accountHint.textContent = '/accounts/{id}?bank=' + b + '&consentId=…';
-      txHint.textContent      = '/accounts/{id}/transactions?bank=' + b + '&consentId=…';
+      // deep links by current inputs
+      applyDeepLinks();
     }
 
-    function goAccount(e){
-      e.preventDefault();
-      const b  = bankSel.value || 'v';
-      const id = document.getElementById('accId').value.trim();
-      const c  = document.getElementById('consId').value.trim();
-      if(!id || !c) return;
-      location.href = '/accounts/' + encodeURIComponent(id) + '?bank=' + encodeURIComponent(b) + '&consentId=' + encodeURIComponent(c);
-    }
+    function applyDeepLinks(){
+      const b = bankHidden.value || 'v';
+      const id = (accIdInp.value || '{id}').trim();
+      const cs = (consentInp.value || '…').trim();
 
-    function goTx(){
-      const b  = bankSel.value || 'v';
-      const id = document.getElementById('accId').value.trim();
-      const c  = document.getElementById('consId').value.trim();
-      if(!id || !c) return;
-      location.href = '/accounts/' + encodeURIComponent(id) + '/transactions?bank=' + encodeURIComponent(b) + '&consentId=' + encodeURIComponent(c);
+      const detailsUrl  = `/accounts/${id}?bank=${b}&consentId=${cs}`;
+      const balancesUrl = detailsUrl; // балансы на странице деталей
+      const txUrl       = `/accounts/${id}/transactions?bank=${b}&consentId=${cs}`;
+
+      accDetails.href  = detailsUrl;
+      accBalances.href = balancesUrl;
+      accTx.href       = txUrl;
+
+      accDetailsHint.textContent = detailsUrl;
+      accTxHint.textContent      = txUrl;
     }
 
     bankSel.addEventListener('change', () => applyBank(bankSel.value));
+    accIdInp.addEventListener('input', applyDeepLinks);
+    consentInp.addEventListener('input', applyDeepLinks);
+
     // init
     applyBank(bankSel.value || 'v');
   </script>
