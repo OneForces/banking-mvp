@@ -1,57 +1,77 @@
-<!-- modules/app-portal/src/main/resources/templates/accounts/transactions.html -->
 <!DOCTYPE html>
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title>Транзакции [[${accountId}]]</title>
+  <title th:text="'Транзакции — ' + (${accountId} ?: '—')">Транзакции</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; margin:24px}
-    .row{margin:12px 0}
-    .muted{color:#666}
-    pre{background:#0b1021;color:#e8eaf6;padding:12px;border-radius:8px;overflow:auto}
-    table{border-collapse:collapse;width:100%}
-    th,td{border:1px solid #e5e7eb;padding:8px;text-align:left}
-    th{background:#fafafa}
-    .error{background:#fff3f3;color:#b00020;border:1px solid #f5c2c2;padding:12px;border-radius:8px}
+    :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:24px; line-height:1.5; color:var(--fg); }
+    h1 { margin:0 0 8px; }
+    .muted{ color:var(--muted); }
+    .row{ margin:12px 0; }
+    .label{ font-size:12px; color:var(--muted); }
+    pre{ background:#0b1021; color:#e8eaf6; padding:12px; border-radius:8px; overflow:auto; }
+    .error{ background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
+    .kv{ display:flex; gap:12px; flex-wrap:wrap; }
+    .kv>div{ min-width:220px; }
+    code.k{ padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ border:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    th{ background:#f9fafb; }
+    a.btn{ display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; background:#111; color:#fff; border:1px solid #111; }
+    input,button{ padding:6px 8px; border-radius:8px; border:1px solid #ddd; }
+    form.inline{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   </style>
 </head>
 <body>
-<h1>Транзакции по счёту [[${accountId}]]</h1>
-<div class="muted">[[${baseUrl}]]</div>
+  <h1>Транзакции</h1>
+  <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
 
-<div class="row" th:if="${error}" th:text="${error}" class="error">Ошибка</div>
+  <div class="row kv">
+    <div><span class="label">Счёт:</span> <code class="k" th:text="${accountId} ?: '—'">—</code></div>
+    <div><span class="label">Банк:</span> <code class="k" th:text="${bank} ?: 'v'">v</code></div>
+    <div><span class="label">Логин клиента:</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
+    <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId} ?: '—'">—</code></div>
+  </div>
 
-<div class="row" th:if="${transactions}">
-  <table>
-    <thead>
-      <tr>
-        <th>Дата</th>
-        <th>Описание</th>
-        <th>Сумма</th>
-        <th>Валюта</th>
-        <th>Статус</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="t : ${transactions}">
-        <td th:text="${t.bookingDate} ?: ${t.valueDate} ?: '—'">—</td>
-        <td th:text="${t.description} ?: ${t.remittanceInformation} ?: '—'">—</td>
-        <td th:text="${t.amount} ?: (${t.transactionAmount} != null ? ${t.transactionAmount.amount} : '—')">—</td>
-        <td th:text="${t.currency} ?: (${t.transactionAmount} != null ? ${t.transactionAmount.currency} : '—')">—</td>
-        <td th:text="${t.status} ?: '—'">—</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+  <form class="row inline" method="get"
+        th:action="@{|/accounts/${accountId}/transactions|}">
+    <input type="hidden" name="bank" th:value="${bank}"/>
+    <input type="hidden" name="consentId" th:value="${consentId}"/>
+    <input type="hidden" name="login" th:value="${login}"/>
+    <label>c: <input type="date" name="from" th:value="${from}"/></label>
+    <label>по: <input type="date" name="to" th:value="${to}"/></label>
+    <button type="submit">Фильтр</button>
+    <a class="btn" th:href="@{|/accounts/${accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">← К счёту</a>
+  </form>
 
-<h3 class="row" th:if="${transactionsJson}">Сырой ответ API</h3>
-<pre class="row" th:if="${transactionsJson}" th:text="${transactionsJson}">—</pre>
+  <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
 
-<p class="row">
-  <a th:href="@{|/accounts/${accountId}?bank=${bank}&login=${login}&consentId=${consentId}|}">⟵ Назад к счёту</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a th:href="@{|/accounts?bank=${bank}&login=${login}|}">К списку счетов</a>
-</p>
+  <div class="row" th:if="${transactions}">
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Описание</th>
+          <th>Сумма</th>
+          <th>Валюта</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="tx : ${transactions}">
+          <td th:text="${tx.bookingDate} ?: ${tx.valueDate} ?: '—'">—</td>
+          <td th:text="${tx.description} ?: ${tx.remittanceInformation} ?: '—'">—</td>
+          <td th:text="${tx.amount?.amount} ?: '—'">—</td>
+          <td th:text="${tx.amount?.currency} ?: '—'">—</td>
+          <td th:text="${tx.status} ?: '—'">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="row" th:if="${transactionsJson}">Ответ API</h3>
+  <pre class="row" th:if="${transactionsJson}" th:text="${transactionsJson}">—</pre>
 </body>
 </html>
