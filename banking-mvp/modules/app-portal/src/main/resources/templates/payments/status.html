@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Статус платежа — ' + (paymentId != null ? paymentId : '—')">Статус платежа</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; --ok:#065f46; --bgok:#ecfdf5; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:0; line-height:1.5; color:var(--fg); }
+    .container{ margin:24px; }
+    h1 { margin:0 0 8px; }
+    .row{ margin:12px 0; }
+    .label{ font-size:12px; color:var(--muted); }
+    .kv{ display:flex; gap:12px; flex-wrap:wrap; }
+    .kv>div{ min-width:220px; }
+    .error{ background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
+    .ok{ background:var(--bgok); border:1px solid #a7f3d0; color:var(--ok); padding:12px; border-radius:8px; }
+    code.k{ padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+    a.btn{ display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; background:#111; color:#fff; border:1px solid #111; }
+    a.btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
+    pre{ background:#0b1021; color:#e8eaf6; padding:12px; border-radius:8px; overflow:auto; }
+  </style>
+</head>
+<body>
+
+  <!-- Навбар -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
+
+  <div class="container">
+    <h1>Статус платежа</h1>
+    <div class="label" th:text="'Base URL: ' + (baseUrl != null ? baseUrl : '—')">—</div>
+
+    <div class="row kv">
+      <div><span class="label">Payment ID:</span> <code class="k" th:text="${paymentId != null ? paymentId : '—'}">—</code></div>
+      <div><span class="label">Банк:</span> <code class="k" th:text="${bank != null ? bank : 'v'}">v</code></div>
+      <div><span class="label">client_id:</span> <code class="k" th:text="${login != null ? login : '—'}">—</code></div>
+    </div>
+
+    <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+
+    <div class="row ok" th:if="${paymentStatus}">
+      <b>Статус:</b> <code class="k" th:text="${paymentStatus}">—</code>
+    </div>
+
+    <div class="row" th:if="${apiErrorBody}">
+      <details open>
+        <summary>API error body</summary>
+        <pre th:text="${apiErrorBody}">—</pre>
+      </details>
+    </div>
+
+    <div class="row" th:if="${statusResponse}">
+      <h3>Сырой ответ</h3>
+      <pre th:text="${statusResponse}">—</pre>
+    </div>
+
+    <div class="row">
+      <a class="btn secondary" th:href="@{|/payments/interbank?bank=${bank}&login=${login}|}">← Новый платёж</a>
+      <a class="btn" th:href="@{|/accounts?bank=${bank}&login=${login}|}">К счетам</a>
+    </div>
+  </div>
+
+  <!-- Автопуллинг статуса по paymentId (если нужно) -->
+  <script th:inline="javascript">
+  /*<![CDATA[*/
+    (function(){
+      var paymentId = /*[[${paymentId}]]*/ null;
+      var bank = /*[[${bank != null ? bank : 'v'}]]*/ 'v';
+      if(!paymentId) return;
+
+      function terminal(st){
+        if(!st) return false;
+        var s = String(st).toLowerCase();
+        return s === 'accepted' || s === 'rejected' || s === 'completed' || s === 'failed';
+      }
+
+      function poll(){
+        fetch('/payments/status/json?bank=' + encodeURIComponent(bank) + '&paymentId=' + encodeURIComponent(paymentId),
+              { headers:{ 'Accept':'application/json' }})
+          .then(r => r.ok ? r.json() : Promise.reject(r.status))
+          .then(j => {
+            var st = (j && (j.status || (j.data && j.data.status))) || null;
+            if (st) {
+              // Обновим бейдж на странице без перезагрузки
+              var badge = document.querySelector('.row.ok code.k');
+              if (badge) badge.textContent = st;
+              if (terminal(st)) return; // остановимся на терминальном статусе
+            }
+          })
+          .catch(() => {})
+          .finally(() => { setTimeout(poll, 5000); });
+      }
+      poll();
+    })();
+  /*]]>*/
+  </script>
+</body>
+</html>

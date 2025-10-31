@@ -2,11 +2,12 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title th:text="'Продукты (' + ${bank.toUpperCase()} + 'Bank)'">Продукты</title>
+  <title th:text="${'Продукты (' + #strings.toUpperCase((bank != null ? bank : 'v')) + 'Bank)'}">Продукты</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root { --muted:#666; --ink:#222; --line:#ddd; --bg:#fafafa; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji"; margin: 24px; line-height: 1.5; color: var(--ink); }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji"; margin: 0; line-height: 1.5; color: var(--ink); }
+    .container{ margin:24px; }
     header { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
     .muted { color: var(--muted); }
     .chips { margin: 12px 0 20px; }
@@ -14,8 +15,6 @@
     .chips a.active { background: #111; color: #fff; border-color: #111; }
     .error { background: #fff3f3; border: 1px solid #f5c2c2; color: #9f1a1a; padding: 12px; border-radius: 8px; }
     .row { margin: 12px 0; }
-
-    /* Карточки */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
     .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
     .title { font-weight: 600; font-size: 16px; margin: 0 0 6px; }
@@ -26,75 +25,84 @@
     dd { margin: 0; }
     .json { background: #0b1021; color: #e8eaf6; padding: 16px; border-radius: 8px; overflow: auto; }
     .empty { padding: 16px; border: 1px dashed var(--line); border-radius: 12px; background: var(--bg); color: var(--muted); }
+    a.btn { display:inline-block; padding:8px 12px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; text-decoration:none; }
+    a.btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
   </style>
 </head>
 <body>
-<header>
-  <h1>Продукты <span th:text="${bank.toUpperCase()} + 'Bank'">VBank</span></h1>
-  <span class="muted" th:text="'(' + ${baseUrl} + ')'">https://vbank.open.bankingapi.ru</span>
-</header>
 
-<div class="row chips">
-  <a th:href="@{/deposit/products(bank='v')}" th:classappend="${bank}=='v' ? ' active' : ''">VBank</a>
-  <a th:href="@{/deposit/products(bank='a')}" th:classappend="${bank}=='a' ? ' active' : ''">ABank</a>
-  <a th:href="@{/deposit/products(bank='s')}" th:classappend="${bank}=='s' ? ' active' : ''">SBank</a>
-  <a th:href="@{/deposit/products.json(bank=${bank})}" title="JSON API">/deposit/products.json</a>
-</div>
+  <!-- Навигация -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
 
-<div th:if="${error}" class="row error" th:text="${error}">
-  Произошла ошибка загрузки продуктов
-</div>
+  <div class="container">
+    <header>
+      <h1>Продукты <span th:text="${#strings.toUpperCase((bank != null ? bank : 'v'))} + 'Bank'">VBank</span></h1>
+      <span class="muted" th:text="${'(' + (baseUrl != null ? baseUrl : '—') + ')'}">https://vbank.open.bankingapi.ru</span>
+    </header>
 
-<!-- Карточки продуктов -->
-<div class="row" th:if="${products}">
-  <div class="grid">
-    <div class="card" th:each="p : ${products}">
-      <div class="type" th:text="${p.productType} ?: '—'">deposit</div>
-      <h3 class="title" th:text="${p.productName} ?: p.productId">Накопительный депозит</h3>
-      <div class="desc" th:text="${p.description} ?: 'Описание отсутствует'">Ставка 8.5% годовых</div>
-      <dl>
-        <dt>ID</dt><dd th:text="${p.productId}">prod-001</dd>
-        <dt>Ставка</dt><dd th:text="${p.interestRate} ?: '—'">8.50</dd>
-        <dt>Мин. сумма</dt><dd th:text="${p.minAmount} ?: '—'">50000.00</dd>
-        <dt>Макс. сумма</dt><dd th:text="${p.maxAmount} ?: '—'">—</dd>
-        <dt>Срок, мес.</dt><dd th:text="${p.termMonths} ?: '—'">12</dd>
-      </dl>
+    <div class="row chips">
+      <a th:href="@{/deposit/products(bank='v')}" th:classappend="${(bank != null ? bank : 'v')=='v'} ? ' active' : ''">VBank</a>
+      <a th:href="@{/deposit/products(bank='a')}" th:classappend="${bank=='a'} ? ' active' : ''">ABank</a>
+      <a th:href="@{/deposit/products(bank='s')}" th:classappend="${bank=='s'} ? ' active' : ''">SBank</a>
+      <a th:href="@{/deposit/products.json(bank=${bank})}" title="JSON API">/deposit/products.json</a>
+      <a class="btn secondary" th:href="@{|/deposit/new?bank=${bank}&login=${login}|}" style="margin-left:8px;">Открыть вклад</a>
     </div>
+
+    <div th:if="${error}" class="row error" th:text="${error}">
+      Произошла ошибка загрузки продуктов
+    </div>
+
+    <!-- Карточки продуктов -->
+    <div class="row" th:if="${products}">
+      <div class="grid">
+        <div class="card" th:each="p : ${products}">
+          <div class="type" th:text="${p.productType} ?: '—'">deposit</div>
+          <h3 class="title" th:text="${p.productName} ?: p.productId">Накопительный депозит</h3>
+          <div class="desc" th:text="${p.description} ?: 'Описание отсутствует'">Ставка 8.5% годовых</div>
+          <dl>
+            <dt>ID</dt><dd th:text="${p.productId}">prod-001</dd>
+            <dt>Ставка</dt><dd th:text="${p.interestRate} ?: '—'">8.50</dd>
+            <dt>Мин. сумма</dt><dd th:text="${p.minAmount} ?: '—'">50000.00</dd>
+            <dt>Макс. сумма</dt><dd th:text="${p.maxAmount} ?: '—'">—</dd>
+            <dt>Срок, мес.</dt><dd th:text="${p.termMonths} ?: '—'">12</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- Пусто -->
+    <div class="row empty" th:if="${products != null and #lists.isEmpty(products)}">
+      Нет продуктов для отображения.
+    </div>
+
+    <!-- JSON отладка -->
+    <div class="row" th:if="${productsJson}">
+      <h3>Ответ API</h3>
+      <pre id="pretty" class="json">Загрузка…</pre>
+    </div>
+
+    <p class="row"><a href="/">⟵ На главную</a></p>
   </div>
-</div>
 
-<!-- Пусто -->
-<div class="row empty" th:if="${products != null} ? ${#lists.isEmpty(products)} : false">
-  Нет продуктов для отображения.
-</div>
-
-<!-- JSON отладка -->
-<div class="row" th:if="${productsJson}">
-  <h3>Ответ API</h3>
-  <pre id="pretty" class="json">Загрузка…</pre>
-</div>
-
-<p class="row"><a href="/">⟵ На главную</a></p>
-
-<script th:inline="javascript">
-/*<![CDATA[*/
-(function () {
-  var raw = /*[[${productsJson}]]*/ null;
-  var el = document.getElementById('pretty');
-  if (!el) return;
-  try {
-    if (typeof raw === 'string') {
-      el.textContent = JSON.stringify(JSON.parse(raw), null, 2);
-    } else if (raw) {
-      el.textContent = JSON.stringify(raw, null, 2);
-    } else {
-      el.textContent = 'Пустой ответ.';
+  <script th:inline="javascript">
+  /*<![CDATA[*/
+  (function () {
+    var raw = /*[[${productsJson}]]*/ null;
+    var el = document.getElementById('pretty');
+    if (!el) return;
+    try {
+      if (typeof raw === 'string') {
+        el.textContent = JSON.stringify(JSON.parse(raw), null, 2);
+      } else if (raw) {
+        el.textContent = JSON.stringify(raw, null, 2);
+      } else {
+        el.textContent = 'Пустой ответ.';
+      }
+    } catch (e) {
+      el.textContent = (typeof raw === 'string' ? raw : String(raw));
     }
-  } catch (e) {
-    el.textContent = (typeof raw === 'string' ? raw : String(raw));
-  }
-})();
-/*]]>*/
-</script>
+  })();
+  /*]]>*/
+  </script>
 </body>
 </html>

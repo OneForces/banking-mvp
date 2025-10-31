@@ -16,12 +16,15 @@
     input, select{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; font:inherit; }
     button, a.btn{ padding:8px 12px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; text-decoration:none; cursor:pointer; }
     a.link{ color:#0a58ca; text-decoration:none; }
-    .pill{ padding:6px 10px; border:1px solid var(--line); background:var(--pill); border-radius:999px; }
+    .pill{ padding:6px 10px; border:1px solid var(--line); background:#f3f4f6; border-radius:999px; }
     .btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
-    small.k{ font-family: ui-monospace,SFMono-Regular,Consolas,Menlo,monospace; padding:2px 6px; border:1px solid var(--line); border-radius:6px; background:#fafafa; }
+    small.k{ font-family: ui-monospace,SFMono-Regular,Consolas,Menlo,monospace; padding:2px 6px; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; }
   </style>
 </head>
 <body>
+  <!-- Глобальная навигация -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
+
   <h1>Онлайн-банк · демо</h1>
   <div class="muted">Скелет приложения на Spring Boot: согласие, счета, <b>балансы</b>, транзакции; каталог продуктов.</div>
 
@@ -29,9 +32,9 @@
   <div class="row inline">
     <label for="bank">Банк:</label>
     <select id="bank">
-      <option value="v">VBank</option>
-      <option value="a">ABank</option>
-      <option value="s">SBank</option>
+      <option value="v" th:selected="${bank}=='v'">VBank</option>
+      <option value="a" th:selected="${bank}=='a'">ABank</option>
+      <option value="s" th:selected="${bank}=='s'">SBank</option>
     </select>
     <span class="muted">Переключатель влияет на все ссылки ниже.</span>
   </div>
@@ -57,8 +60,10 @@
       <h3>Каталог продуктов</h3>
       <p class="muted">Вклады/кредиты (UI) и «сырое» JSON.</p>
       <div class="row inline">
-        <a class="btn" id="products-ui" href="/deposit/products?bank=v">Открыть UI</a>
-        <a class="btn secondary" id="products-json" href="/deposit/products.json?bank=v" target="_blank">Открыть JSON</a>
+        <a class="btn" id="products-ui"
+           th:href="@{/deposit/products(bank=${bank != null ? bank : 'v'}, login=${login})}">Открыть UI</a>
+        <a class="btn secondary" id="products-json"
+           th:href="@{/deposit/products.json(bank=${bank != null ? bank : 'v'}, login=${login})}" target="_blank">Открыть JSON</a>
       </div>
       <div class="row muted">
         Текущая ссылка: <small class="k" id="products-hint">/deposit/products?bank=v</small>
@@ -69,10 +74,10 @@
     <div class="card">
       <h3>Счета клиента</h3>
       <p class="muted">Создаём согласие и показываем счета. Для некоторых банков согласие будет <i>pending</i> (ожидает одобрения).</p>
-      <form class="inline" method="get" action="/accounts" id="accounts-form">
-        <input type="hidden" name="bank" id="bank-hidden" value="v"/>
+      <form class="inline" method="get" th:action="@{/accounts}" id="accounts-form">
+        <input type="hidden" name="bank" id="bank-hidden" th:value="${bank} ?: 'v'"/>
         <label for="login">Логин клиента:</label>
-        <input id="login" name="login" type="text" value="team101-1" placeholder="client_id клиента" required/>
+        <input id="login" name="login" type="text" th:value="${login} ?: 'team101-1'" placeholder="client_id клиента" required/>
         <button type="submit">Показать счета</button>
       </form>
       <div class="row muted">
@@ -90,7 +95,7 @@
       </div>
       <div class="row inline">
         <label>Consent ID:</label>
-        <input id="consent-id" type="text" placeholder="consent-xyz" style="min-width:220px"/>
+        <input id="consent-id" type="text" th:value="${consentId}" placeholder="consent-xyz" style="min-width:220px"/>
       </div>
       <div class="row inline">
         <a class="btn" id="acc-details" href="#">Открыть детали</a>
@@ -126,14 +131,15 @@
     const healthLink = document.getElementById('health-link');
     const healthHint = document.getElementById('health-hint');
 
-    const prodUi  = document.getElementById('products-ui');
-    const prodJson= document.getElementById('products-json');
-    const prodHint= document.getElementById('products-hint');
+    const prodUi   = document.getElementById('products-ui');
+    const prodJson = document.getElementById('products-json');
+    const prodHint = document.getElementById('products-hint');
 
     const accHint = document.getElementById('accounts-hint');
 
     const accIdInp    = document.getElementById('acc-id');
     const consentInp  = document.getElementById('consent-id');
+    const loginInp    = document.getElementById('login');
     const accDetails  = document.getElementById('acc-details');
     const accBalances = document.getElementById('acc-balances');
     const accTx       = document.getElementById('acc-tx');
@@ -149,8 +155,9 @@
       healthHint.textContent = url(healthLink.href);
 
       // products
-      prodUi.href   = '/deposit/products?bank=' + b;
-      prodJson.href = '/deposit/products.json?bank=' + b;
+      const lg = (loginInp.value || '').trim();
+      prodUi.href   = '/deposit/products?bank=' + b + (lg ? '&login=' + encodeURIComponent(lg) : '');
+      prodJson.href = '/deposit/products.json?bank=' + b + (lg ? '&login=' + encodeURIComponent(lg) : '');
       prodHint.textContent = url(prodUi.href);
 
       // accounts form
@@ -162,13 +169,16 @@
     }
 
     function applyDeepLinks(){
-      const b = bankHidden.value || 'v';
+      const b  = bankHidden.value || 'v';
       const id = (accIdInp.value || '{id}').trim();
-      const cs = (consentInp.value || '…').trim();
+      const cs = (consentInp.value || '').trim();
+      const lg = (loginInp.value || '').trim();
 
-      const detailsUrl  = `/accounts/${id}?bank=${b}&consentId=${cs}`;
+      const q = `bank=${b}` + (cs ? `&consentId=${encodeURIComponent(cs)}` : '') + (lg ? `&login=${encodeURIComponent(lg)}` : '');
+
+      const detailsUrl  = `/accounts/${id}?${q}`;
       const balancesUrl = detailsUrl; // балансы на странице деталей
-      const txUrl       = `/accounts/${id}/transactions?bank=${b}&consentId=${cs}`;
+      const txUrl       = `/accounts/${id}/transactions?${q}`;
 
       accDetails.href  = detailsUrl;
       accBalances.href = balancesUrl;
@@ -181,6 +191,7 @@
     bankSel.addEventListener('change', () => applyBank(bankSel.value));
     accIdInp.addEventListener('input', applyDeepLinks);
     consentInp.addEventListener('input', applyDeepLinks);
+    loginInp.addEventListener('input', applyDeepLinks);
 
     // init
     applyBank(bankSel.value || 'v');

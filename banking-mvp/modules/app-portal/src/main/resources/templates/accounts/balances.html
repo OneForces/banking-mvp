@@ -1,24 +1,86 @@
-<!-- modules/app-portal/src/main/resources/templates/accounts/balances.html -->
 <!doctype html>
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <title>Балансы</title>
+  <title th:text="'Балансы — ' + (${accountId} ?: '—')">Балансы</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial;margin:24px}
-    pre{background:#0b1021;color:#e8eaf6;padding:16px;border-radius:8px;overflow:auto}
-    .row{margin:12px 0}
+    :root{ --fg:#111; --muted:#666; --line:#e5e7eb; --pill:#f3f4f6; --err:#b00020; }
+    body{ font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:0; line-height:1.5; color:var(--fg); }
+    main{ padding:20px 24px; }
+    h1{ margin:12px 0 4px; }
+    .muted{ color:var(--muted); }
+    .row{ margin:12px 0; }
+    pre{ background:#0b1021; color:#e8eaf6; padding:12px; border-radius:8px; overflow:auto; }
+    .error{ color:var(--err); background:#fff3f3; border:1px solid #f5c2c2; padding:10px; border-radius:8px; }
+    .kv{ display:flex; gap:12px; flex-wrap:wrap; }
+    .kv>div{ min-width:200px; }
+    code.k{ padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+    table{ width:100%; border-collapse:collapse; margin-top:8px; }
+    th,td{ border:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    th{ background:#f9fafb; }
+    a.btn{ display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; background:#111; color:#fff; border:1px solid #111; }
+    a.btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
   </style>
 </head>
 <body>
-<h1>Балансы</h1>
-<div class="row" th:if="${error}" th:text="${error}" style="color:#b00020"></div>
-<h3>Ответ API</h3>
-<pre th:text="${balancesJson}">Загрузка…</pre>
-<p class="row">
-  <a th:href="@{'/accounts/' + ${accountId} + '/view'(bank=${bank},consentId=${consentId})}">&larr; К счёту</a>
-  &nbsp;|&nbsp; <a href="/">На главную</a>
-</p>
+
+<!-- верхнее меню -->
+<div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
+
+<main>
+  <h1>Балансы</h1>
+  <div class="muted row">
+    Счёт: <code class="k" th:text="${accountId}">—</code>
+    · Банк: <code class="k" th:text="${bank}">v</code>
+    · Consent: <code class="k" th:text="${consentId}">—</code>
+  </div>
+
+  <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+
+  <!-- Таблица балансов, если распарсили -->
+  <div class="row" th:if="${balances}">
+    <table>
+      <thead>
+        <tr>
+          <th>Тип баланса</th>
+          <th>Сумма</th>
+          <th>Валюта</th>
+          <th>Доступно / Кредитная линия</th>
+          <th>Дата</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="b : ${balances}">
+          <td th:text="${b.balanceType} ?: (${b.type} ?: '—')">—</td>
+          <td th:text="${b.amount?.amount} ?: '—'">—</td>
+          <td th:text="${b.amount?.currency} ?: '—'">—</td>
+          <td>
+            <div th:if="${b.availableAmount}" th:text="'available: ' + b.availableAmount?.amount + ' ' + (b.availableAmount?.currency ?: '')">—</div>
+            <div th:if="${b.creditLine}">creditLine:
+              <span th:text="${b.creditLine?.amount?.amount}">—</span>
+              <span th:text="${b.creditLine?.amount?.currency}">—</span>
+            </div>
+          </td>
+          <td th:text="${b.referenceDate} ?: (${b.lastChangeDateTime} ?: '—')">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- JSON-ответ -->
+  <h3 class="row" th:if="${balancesJson}">Ответ API</h3>
+  <pre class="row" th:if="${balancesJson}" th:text="${balancesJson}">Загрузка…</pre>
+
+  <!-- Нав-ссылки -->
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn secondary"
+       th:href="@{|/accounts/${accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">&larr; К деталям счёта</a>
+    <a class="btn secondary"
+       th:href="@{|/accounts/${accountId}/transactions?bank=${bank}&consentId=${consentId}&login=${login}|}">История операций →</a>
+    <a class="btn" th:href="@{|/accounts?bank=${bank}&login=${login}|}">Все счета</a>
+  </div>
+</main>
+
 </body>
 </html>

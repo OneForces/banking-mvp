@@ -2,12 +2,12 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8"/>
-  <!-- FIX: elvis внутри одного выражения -->
   <title th:text="'Транзакции — ' + (accountId ?: '—')">Транзакции</title>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <style>
     :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; --ok:#065f46; --bgok:#ecfdf5; }
-    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:24px; line-height:1.5; color:var(--fg); }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:0; line-height:1.5; color:var(--fg); }
+    .container{ margin:24px; }
     h1 { margin:0 0 8px; }
     .muted{ color:var(--muted); }
     .row{ margin:12px 0; }
@@ -27,99 +27,113 @@
     details > summary { cursor:pointer; font-weight:600; margin-bottom:6px; }
     ul.permissions { margin:6px 0 0 18px; }
     .hint { font-size:13px; color:var(--muted); }
+    .links{ display:flex; gap:8px; flex-wrap:wrap; }
   </style>
 </head>
 <body>
-  <h1>Транзакции</h1>
-  <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
 
-  <div class="row kv">
-    <div><span class="label">Счёт:</span> <code class="k" th:text="${accountId} ?: '—'">—</code></div>
-    <div><span class="label">Банк:</span> <code class="k" th:text="${bank} ?: 'v'">v</code></div>
-    <div><span class="label">Логин клиента (client_id):</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
-    <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId} ?: '—'">—</code></div>
-  </div>
+  <!-- Глобальная навигация -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
 
-  <!-- FIX: одно выражение в th:if -->
-  <div class="row" th:if="${consentStatusNormalized != null or (consentPermissions != null and !#lists.isEmpty(consentPermissions))}">
-    <div class="ok" th:if="${#strings.isEmpty(error)}">
-      <div><b>Статус согласия:</b>
-        <!-- FIX: elvis одним выражением -->
-        <code class="k" th:text="${consentStatusNormalized ?: (consentStatus ?: 'unknown')}">unknown</code>
-      </div>
-      <div th:if="${consentPermissions != null and !#lists.isEmpty(consentPermissions)}">
-        <div class="label" style="margin-top:6px;">Permissions:</div>
-        <ul class="permissions">
-          <li th:each="p : ${consentPermissions}" th:text="${p}">ReadTransactions</li>
-        </ul>
-      </div>
-      <div class="hint" th:if="${consentPermissions != null and !consentPermissions.contains('ReadTransactions')}">
-        Для чтения операций требуется <code class="k">ReadTransactions</code> (и желательно <code class="k">ReadTransactionsDetail</code>).
+  <div class="container">
+    <h1>Транзакции</h1>
+    <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
+
+    <div class="row kv">
+      <div><span class="label">Счёт:</span> <code class="k" th:text="${accountId} ?: '—'">—</code></div>
+      <div><span class="label">Банк:</span> <code class="k" th:text="${bank} ?: 'v'">v</code></div>
+      <div><span class="label">Логин клиента (client_id):</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
+      <div><span class="label">Consent ID:</span> <code class="k" th:text="${consentId} ?: '—'">—</code></div>
+    </div>
+
+    <!-- Согласие -->
+    <div class="row" th:if="${consentStatusNormalized != null or (consentPermissions != null and !#lists.isEmpty(consentPermissions))}">
+      <div class="ok" th:if="${#strings.isEmpty(error)}">
+        <div><b>Статус согласия:</b>
+          <code class="k" th:text="${consentStatusNormalized ?: (consentStatus ?: 'unknown')}">unknown</code>
+        </div>
+        <div th:if="${consentPermissions != null and !#lists.isEmpty(consentPermissions)}">
+          <div class="label" style="margin-top:6px;">Permissions:</div>
+          <ul class="permissions">
+            <li th:each="p : ${consentPermissions}" th:text="${p}">ReadTransactions</li>
+          </ul>
+        </div>
+        <div class="hint" th:if="${consentPermissions != null and !consentPermissions.contains('ReadTransactions')}">
+          Для чтения операций требуется <code class="k">ReadTransactions</code> (и желательно <code class="k">ReadTransactionsDetail</code>).
+        </div>
       </div>
     </div>
+
+    <form class="row inline" method="get" th:action="@{|/accounts/${accountId}/transactions|}">
+      <input type="hidden" name="bank" th:value="${bank}"/>
+      <input type="hidden" name="consentId" th:value="${consentId}"/>
+      <input type="hidden" name="login" th:value="${login}"/>
+      <label>c: <input type="date" name="from" th:value="${from}"/></label>
+      <label>по: <input type="date" name="to" th:value="${to}"/></label>
+      <button type="submit">Фильтр</button>
+      <span class="links">
+        <a class="btn" th:href="@{|/accounts/${accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">← К счёту</a>
+        <a class="btn" th:href="@{|/accounts?bank=${bank}&login=${login}|}">К списку счетов</a>
+      </span>
+    </form>
+
+    <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+
+    <!-- тело ошибки от банка -->
+    <div class="row" th:if="${apiErrorBody}">
+      <details open>
+        <summary>API error body</summary>
+        <pre th:text="${apiErrorBody}">—</pre>
+      </details>
+    </div>
+
+    <!-- Диагностика параметров запроса -->
+    <div class="row" th:if="${#strings.isEmpty(error) and #strings.isEmpty(apiErrorBody)}">
+      <details>
+        <summary>Диагностика запроса</summary>
+        <div class="kv" style="margin-top:8px">
+          <div><span class="label">from:</span> <code class="k" th:text="${from} ?: '—'">—</code></div>
+          <div><span class="label">to:</span> <code class="k" th:text="${to} ?: '—'">—</code></div>
+          <div><span class="label">client_id:</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
+        </div>
+        <div class="hint" style="margin-top:6px;">
+          Если видите <code class="k">CONSENT_REQUIRED</code> — проверьте, что используется актуальный <code class="k">consentId</code> и в permissions есть <code class="k">ReadTransactions</code>.
+        </div>
+      </details>
+    </div>
+
+    <!-- Таблица транзакций -->
+    <div class="row" th:if="${transactions != null and !#lists.isEmpty(transactions)}">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Описание</th>
+            <th>Сумма</th>
+            <th>Валюта</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="tx : ${transactions}">
+            <td th:text="${tx['bookingDate'] ?: (tx['bookingDateTime'] ?: (tx['valueDate'] ?: (tx['valueDateTime'] ?: '—')))}">—</td>
+            <td th:text="${tx['transactionInformation'] ?: (tx['description'] ?: (tx['remittanceInformation'] ?: '—'))}">—</td>
+            <td th:text="${(tx['amount'] != null and tx['amount']['amount'] != null) ? tx['amount']['amount'] : '—'}">—</td>
+            <td th:text="${(tx['amount'] != null and tx['amount']['currency'] != null) ? tx['amount']['currency'] : '—'}">—</td>
+            <td th:text="${tx['status'] ?: '—'}">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row muted" th:if="${transactions == null or #lists.isEmpty(transactions)}">
+      Транзакций не найдено по выбранным параметрам.
+    </div>
+
+    <h3 class="row" th:if="${transactionsJson}">Ответ API</h3>
+    <pre class="row" th:if="${transactionsJson}" th:text="${transactionsJson}">—</pre>
+
+    <p class="row"><a href="/">⟵ На главную</a></p>
   </div>
-
-  <form class="row inline" method="get" th:action="@{|/accounts/${accountId}/transactions|}">
-    <input type="hidden" name="bank" th:value="${bank}"/>
-    <input type="hidden" name="consentId" th:value="${consentId}"/>
-    <input type="hidden" name="login" th:value="${login}"/>
-    <label>c: <input type="date" name="from" th:value="${from}"/></label>
-    <label>по: <input type="date" name="to" th:value="${to}"/></label>
-    <button type="submit">Фильтр</button>
-    <a class="btn" th:href="@{|/accounts/${accountId}?bank=${bank}&consentId=${consentId}&login=${login}|}">← К счёту</a>
-  </form>
-
-  <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
-
-  <!-- тело ошибки от банка -->
-  <div class="row" th:if="${apiErrorBody}">
-    <details open>
-      <summary>API error body</summary>
-      <pre th:text="${apiErrorBody}">—</pre>
-    </details>
-  </div>
-
-  <!-- Диагностика параметров запроса -->
-  <div class="row" th:if="${#strings.isEmpty(error) and #strings.isEmpty(apiErrorBody)}">
-    <details>
-      <summary>Диагностика запроса</summary>
-      <div class="kv" style="margin-top:8px">
-        <div><span class="label">from:</span> <code class="k" th:text="${from} ?: '—'">—</code></div>
-        <div><span class="label">to:</span> <code class="k" th:text="${to} ?: '—'">—</code></div>
-        <div><span class="label">client_id:</span> <code class="k" th:text="${login} ?: '—'">—</code></div>
-      </div>
-      <div class="hint" style="margin-top:6px;">
-        Если видите <code class="k">CONSENT_REQUIRED</code> — проверьте, что используется актуальный <code class="k">consentId</code> и в permissions есть <code class="k">ReadTransactions</code>.
-      </div>
-    </details>
-  </div>
-
-  <div class="row" th:if="${transactions != null and !#lists.isEmpty(transactions)}">
-    <table>
-      <thead>
-        <tr>
-          <th>Дата</th>
-          <th>Описание</th>
-          <th>Сумма</th>
-          <th>Валюта</th>
-          <th>Статус</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr th:each="tx : ${transactions}">
-          <!-- FIX: elvis в одном выражении + map-доступ -->
-          <td th:text="${tx['bookingDate'] ?: (tx['bookingDateTime'] ?: (tx['valueDate'] ?: (tx['valueDateTime'] ?: '—')))}">—</td>
-          <td th:text="${tx['transactionInformation'] ?: (tx['description'] ?: (tx['remittanceInformation'] ?: '—'))}">—</td>
-          <!-- FIX: тернарный оператор со скобками -->
-          <td th:text="${(tx['amount'] != null and tx['amount']['amount'] != null) ? tx['amount']['amount'] : '—'}">—</td>
-          <td th:text="${(tx['amount'] != null and tx['amount']['currency'] != null) ? tx['amount']['currency'] : '—'}">—</td>
-          <td th:text="${tx['status'] ?: '—'}">—</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3 class="row" th:if="${transactionsJson}">Ответ API</h3>
-  <pre class="row" th:if="${transactionsJson}" th:text="${transactionsJson}">—</pre>
 </body>
 </html>

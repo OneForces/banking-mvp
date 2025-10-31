@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<nav th:fragment="nav(bank, login, consentId, baseUrl)"
+     style="
+       position:sticky; top:0; z-index:1000;            /* поверх всего */
+       display:flex; gap:16px; align-items:center; justify-content:space-between;
+       padding:12px 16px; border-bottom:1px solid #1c2338;
+       background:#0b1021; color:#e8eaf6;
+     ">
+  <div style="display:flex; gap:10px; align-items:center;">
+    <a th:href="@{/}" style="color:#fff;text-decoration:none;font-weight:700;pointer-events:auto;">🏦 Онлайн-банк · демо</a>
+    <span style="opacity:.6" th:text="${baseUrl} ?: ''"> </span>
+  </div>
+
+  <form method="get" th:action="@{/accounts}"
+        style="display:flex;gap:8px;align-items:center;flex-wrap:wrap; margin-left:auto;">
+    <label style="opacity:.85; color:#e8eaf6;">Банк:
+      <select name="bank" style="margin-left:6px;">
+        <option value="v" th:selected="${bank}=='v'">VBank</option>
+        <option value="a" th:selected="${bank}=='a'">ABank</option>
+        <option value="s" th:selected="${bank}=='s'">SBank</option>
+      </select>
+    </label>
+    <label style="opacity:.85; color:#e8eaf6;">Логин:
+      <input type="text" name="login" th:value="${login}" placeholder="client_id" style="margin-left:6px;"/>
+    </label>
+    <button type="submit">Счета</button>
+  </form>
+
+  <div class="links" style="display:flex;gap:12px; margin-left:16px;">
+    <a th:href="@{|/accounts?bank=${bank ?: 'v'}&login=${login}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Главная
+    </a>
+    <a th:href="@{|/accounts?bank=${bank ?: 'v'}&login=${login}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Accounts
+    </a>
+    <a th:href="@{|/payments/interbank?bank=${bank ?: 'v'}&login=${login}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Payments
+    </a>
+    <a th:href="@{|/consents?bank=${bank ?: 'v'}&login=${login}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Consents
+    </a>
+    <a th:href="@{|/deposit/products?bank=${bank ?: 'v'}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Products
+    </a>
+    <a th:href="@{|/loan/new?bank=${bank ?: 'v'}&login=${login}|}"
+       style="display:inline-block;padding:6px 10px;border-radius:6px;background:#2b3a67;color:#fff;text-decoration:none;pointer-events:auto;">
+      Loan
+    </a>
+  </div>
+</nav>
+</body>
+</html>

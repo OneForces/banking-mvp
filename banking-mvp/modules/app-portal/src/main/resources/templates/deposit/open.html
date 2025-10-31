@@ -1,1 +1,116 @@
-<!doctype html><html><body><h2>Открытие вклада</h2></body></html>
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="${'Открытие вклада — ' + (#strings.toUpperCase((bank != null ? bank : 'v')) + 'Bank')}">Открытие вклада</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{--fg:#111;--muted:#666;--line:#e5e7eb;--err:#b00020;--bgerr:#fff3f3;--ok:#065f46;--bgok:#ecfdf5}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial;margin:0;line-height:1.5;color:var(--fg)}
+    .container{margin:24px}
+    header{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .row{margin:12px 0}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+    .card{border:1px solid var(--line);border-radius:12px;padding:16px}
+    label{display:block;margin:6px 0 4px}
+    input,select{width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font:inherit}
+    button,a.btn{padding:8px 12px;border-radius:8px;border:1px solid #111;background:#111;color:#fff;text-decoration:none;cursor:pointer}
+    a.btn.secondary{background:#fff;color:#111;border-color:#ddd}
+    .error{background:var(--bgerr);border:1px solid #f5c2c2;color:var(--err);padding:12px;border-radius:8px}
+    .ok{background:var(--bgok);border:1px solid #a7f3d0;color:var(--ok);padding:12px;border-radius:8px}
+    code.k{padding:2px 6px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px}
+    small.hint{color:var(--muted);display:block;margin-top:6px}
+  </style>
+</head>
+<body>
+
+  <!-- Глобальная навигация -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
+
+  <div class="container">
+    <header>
+      <h1>Открытие вклада</h1>
+      <span class="muted" th:text="${'(' + (baseUrl != null ? baseUrl : '—') + ')'}">https://…</span>
+    </header>
+
+    <!-- Контекст -->
+    <div class="row" style="display:flex;gap:12px;flex-wrap:wrap">
+      <div><span class="muted">Банк:</span> <code class="k" th:text="${bank != null ? bank : 'v'}">v</code></div>
+      <div><span class="muted">Логин:</span> <code class="k" th:text="${login != null ? login : '—'}">—</code></div>
+    </div>
+
+    <!-- Сообщения -->
+    <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+    <div class="row ok" th:if="${info}" th:text="${info}">Ок</div>
+
+    <div class="grid">
+      <!-- Форма открытия вклада -->
+      <div class="card">
+        <h3>Параметры вклада</h3>
+        <form method="post" th:action="@{/deposit/open}">
+          <!-- если используется CSRF -->
+          <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+          <input type="hidden" name="bank" th:value="${bank}"/>
+          <input type="hidden" name="login" th:value="${login}"/>
+
+          <label for="product">Продукт</label>
+          <select id="product" name="productId" required
+                  th:with="list=${products != null ? products : {}}">
+            <!-- ожидается, что контроллер положит products: List<Map> с полями id,name,rate -->
+            <option value="" disabled th:if="${products == null}" selected>Загрузите продукты на /deposit/products</option>
+            <option th:each="p : ${products}"
+                    th:value="${p.id != null ? p.id : (p.productId != null ? p.productId : '')}"
+                    th:text="${(p.name != null ? p.name : (p.title != null ? p.title : 'Продукт')) + (p.rate != null ? ' — ' + p.rate + '%' : '')}">
+              Продукт
+            </option>
+          </select>
+          <small class="hint">Список берётся из каталога продуктов; можно перейти и выбрать нужный ID.</small>
+
+          <label for="amount">Сумма</label>
+          <input id="amount" name="amount" type="number" min="1000" step="100" placeholder="100000" required/>
+
+          <label for="currency">Валюта</label>
+          <select id="currency" name="currency" required>
+            <option value="RUB">RUB</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+
+          <label for="term">Срок (мес.)</label>
+          <input id="term" name="termMonths" type="number" min="1" max="60" step="1" placeholder="12" required/>
+
+          <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button type="submit">Открыть вклад</button>
+            <a class="btn secondary" th:href="@{|/deposit/products?bank=${bank}|}">Каталог продуктов</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Предпросмотр / итог -->
+      <div class="card">
+        <h3>Предпросмотр</h3>
+        <div class="row muted">Заполните форму — здесь появится расчёт и подтверждение от API.</div>
+
+        <!-- Если контроллер вернул responseJson после POST -->
+        <div class="row" th:if="${responseJson}">
+          <pre th:text="${responseJson}">—</pre>
+        </div>
+
+        <!-- Показать детали созданного вклада, если есть -->
+        <div class="row" th:if="${deposit}">
+          <div><span class="muted">ID вклада:</span> <code class="k" th:text="${deposit.id != null ? deposit.id : (deposit.depositId != null ? deposit.depositId : '—')}">—</code></div>
+          <div><span class="muted">Статус:</span> <code class="k" th:text="${deposit.status != null ? deposit.status : '—'}">—</code></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="row">
+      <a class="btn secondary" href="/">⟵ На главную</a>
+      <a class="btn secondary" th:href="@{|/accounts?bank=${bank}&login=${login}|}">К счетам</a>
+    </p>
+  </div>
+
+</body>
+</html>

@@ -1,1 +1,148 @@
-<!doctype html><html><body><h2>Статус заявки</h2></body></html>
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Статус заявки' + (${applicationId} != null ? (' — ' + ${applicationId}) : '')">Статус заявки</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root{--fg:#111;--muted:#666;--line:#e5e7eb;--ok:#065f46;--bgok:#ecfdf5;--warn:#92400e;--bgwarn:#fffbeb;--err:#b00020;--bgerr:#fff3f3}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial;margin:0;line-height:1.5;color:var(--fg)}
+    .container{margin:24px}
+    h1{margin:0 0 8px}
+    .muted{color:var(--muted)}
+    .row{margin:12px 0}
+    form.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    input,select,button{padding:8px 10px;border:1px solid #ddd;border-radius:8px;font:inherit}
+    button{background:#111;color:#fff;cursor:pointer}
+    .kv{display:flex;gap:12px;flex-wrap:wrap}
+    .kv>div{min-width:220px}
+    .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#f9fafb}
+    .tag.green{background:var(--bgok);color:var(--ok);border-color:#a7f3d0}
+    .tag.orange{background:var(--bgwarn);color:var(--warn);border-color:#fde68a}
+    .tag.red{background:var(--bgerr);color:var(--err);border-color:#f5c2c2}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+    th{background:#f8fafc}
+    .error{background:var(--bgerr);color:var(--err);padding:12px;border-radius:8px}
+    .ok{background:var(--bgok);color:var(--ok);padding:12px;border-radius:8px}
+    pre{background:#0b1021;color:#e8eaf6;padding:12px;border-radius:8px;overflow:auto}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    a.btn{display:inline-block;padding:8px 12px;border-radius:8px;text-decoration:none;border:1px solid #111;background:#111;color:#fff}
+    a.btn.secondary{background:#fff;color:#111;border-color:#ddd}
+  </style>
+</head>
+<body>
+
+  <!-- Навбар -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
+
+  <div class="container">
+    <h1>Статус заявки</h1>
+    <div class="muted" th:text="${baseUrl} ?: '—'">—</div>
+
+    <!-- Форма проверки -->
+    <div class="row">
+      <form class="inline" th:action="@{/loan/status}" method="get">
+        <label>Банк:
+          <select name="bank">
+            <option value="v" th:selected="${(bank != null ? bank : 'v') == 'v'}">VBank</option>
+            <option value="a" th:selected="${bank == 'a'}">ABank</option>
+            <option value="s" th:selected="${bank == 's'}">SBank</option>
+          </select>
+        </label>
+        <label>Логин:
+          <input type="text" name="login" th:value="${login}" placeholder="client_id"/>
+        </label>
+        <label>Application ID:
+          <input type="text" name="applicationId" th:value="${applicationId}" placeholder="app-12345" required/>
+        </label>
+        <button type="submit">Проверить</button>
+        <a class="btn secondary" href="/" style="margin-left:4px">На главную</a>
+      </form>
+    </div>
+
+    <!-- Сообщения -->
+    <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+    <div class="row ok" th:if="${info}" th:text="${info}">Ок</div>
+
+    <!-- Карточка статуса -->
+    <div class="row" th:if="${applicationId}">
+      <div class="kv">
+        <div><span class="muted">Заявка:</span> <code th:text="${applicationId}">—</code></div>
+        <div><span class="muted">Банк:</span> <code th:text="${bank ?: 'v'}">v</code></div>
+        <div><span class="muted">Клиент:</span> <code th:text="${login ?: '—'}">—</code></div>
+        <div>
+          <span class="muted">Статус:</span>
+          <span th:with="st=${status != null ? status : (data != null && data.status != null ? data.status : 'unknown')},
+                         s=${#strings.toLowerCase(st)}"
+                th:classappend="${s == 'approved' || s == 'accepted' ? ' tag green' :
+                                (s == 'pending' || s == 'processing' || s == 'in_progress') ? ' tag orange' : ' tag red'}"
+                th:text="${st}">unknown</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Таймлайн -->
+    <div class="row" th:if="${timeline}">
+      <h3>Хронология</h3>
+      <table>
+        <thead><tr><th>Время</th><th>Событие</th><th>Комментарий</th></tr></thead>
+        <tbody>
+          <tr th:each="e : ${timeline}">
+            <td th:text="${e.time ?: e.timestamp ?: '—'}">—</td>
+            <td th:text="${e.type ?: e.event ?: '—'}">—</td>
+            <td th:text="${e.note ?: e.message ?: '—'}">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Действия -->
+    <div class="row actions" th:if="${applicationId}">
+      <a class="btn" th:href="@{|/loan/status?bank=${bank}&login=${login}&applicationId=${applicationId}|}">Обновить</a>
+      <a class="btn secondary" th:href="@{|/loan/new?bank=${bank}&login=${login}|}">Новая заявка</a>
+    </div>
+
+    <!-- Сырый ответ -->
+    <div class="row" th:if="${responseJson}">
+      <h3>Ответ API</h3>
+      <pre th:text="${responseJson}">—</pre>
+    </div>
+
+    <p class="row"><a href="/">⟵ На главную</a></p>
+  </div>
+
+  <!-- Авто-поллинг статуса -->
+  <script th:inline="javascript">
+  /*<![CDATA[*/
+    (function () {
+      var appId = /*[[${applicationId}]]*/ null;
+      var bank  = /*[[${bank != null ? bank : 'v'}]]*/ 'v';
+      var st    = /*[[${status}]]*/ null;
+      var s = (st ? String(st).toLowerCase() : null);
+      var shouldPoll = appId && s && (s === 'pending' || s === 'processing' || s === 'in_progress');
+
+      function pollOnce(){
+        if(!appId) return;
+        fetch('/loan/status/json?bank=' + encodeURIComponent(bank) + '&applicationId=' + encodeURIComponent(appId),
+              { headers:{ 'Accept':'application/json' } })
+          .then(r => r.ok ? r.json() : Promise.reject(r.status))
+          .then(j => {
+            var newStatus = (j && (j.status || (j.data && j.data.status))) || null;
+            if (newStatus) {
+              var curr = (st ? String(st).toLowerCase() : '');
+              var ns = String(newStatus).toLowerCase();
+              if (ns !== curr) location.reload();
+            }
+          })
+          .catch(() => {});
+      }
+
+      if (shouldPoll) {
+        setInterval(pollOnce, 5000);
+      }
+    })();
+  /*]]>*/
+  </script>
+</body>
+</html>

@@ -1,28 +1,125 @@
-<!doctype html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="utf-8"><title>Межбанковский перевод</title></head>
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Межбанковский платёж</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    :root { --fg:#111; --muted:#666; --line:#e5e7eb; --err:#b00020; --bgerr:#fff3f3; --ok:#065f46; --bgok:#ecfdf5; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Arial; margin:0; line-height:1.5; color:var(--fg); }
+    .container { margin:24px; }
+    h1 { margin:0 0 8px; }
+    .row{ margin:12px 0; }
+    .label{ font-size:12px; color:var(--muted); }
+    .kv{ display:flex; gap:12px; flex-wrap:wrap; }
+    .kv>div{ min-width:220px; }
+    .error{ background:var(--bgerr); border:1px solid #f5c2c2; color:var(--err); padding:12px; border-radius:8px; }
+    .ok{ background:var(--bgok); border:1px solid #a7f3d0; color:var(--ok); padding:12px; border-radius:8px; }
+    input,button,select{ padding:8px 10px; border-radius:8px; border:1px solid #ddd; font:inherit; }
+    form .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    code.k{ padding:2px 6px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; }
+    a.btn{ display:inline-block; padding:8px 12px; border-radius:8px; text-decoration:none; background:#111; color:#fff; border:1px solid #111; }
+    a.btn.secondary{ background:#fff; color:#111; border-color:#ddd; }
+    pre{ background:#0b1021; color:#e8eaf6; padding:12px; border-radius:8px; overflow:auto; }
+  </style>
+</head>
 <body>
-<h1>Межбанковский перевод</h1>
-<form method="post" th:action="@{/payments/interbank}">
-  <label>Банк: <select name="bank">
-    <option value="v">VBank</option><option value="a">ABank</option><option value="s">SBank</option>
-  </select></label><br>
-  <label>From IBAN: <input name="fromIban" required></label><br>
-  <label>To IBAN: <input name="toIban" required></label><br>
-  <label>Amount: <input type="number" step="0.01" name="amount" required></label><br>
-  <label>Currency: <input name="currency" value="RUB" required></label><br>
-  <label>Purpose: <input name="purpose" maxlength="140"></label><br>
-  <button type="submit">Отправить</button>
-</form>
 
-<div th:if="${paymentId}">
-  <h3>Платёж создан</h3>
-  <p>payment_id: <span th:text="${paymentId}"></span></p>
-</div>
+  <!-- Навбар -->
+  <div th:replace="~{fragments/nav :: nav(${bank}, ${login}, ${consentId}, ${baseUrl})}"></div>
 
-<div th:if="${error}">
-  <h3 style="color:#b00020" th:text="${error}"></h3>
-  <pre th:text="${apiErrorBody}"></pre>
-</div>
+  <div class="container">
+    <h1>Межбанковский платёж</h1>
+    <div class="label" th:text="'Base URL: ' + (baseUrl != null ? baseUrl : '—')">—</div>
+
+    <div class="row kv">
+      <div><span class="label">Банк:</span> <code class="k" th:text="${bank != null ? bank : 'v'}">v</code></div>
+      <div><span class="label">Логин клиента (client_id):</span> <code class="k" th:text="${login != null ? login : '—'}">—</code></div>
+    </div>
+
+    <div class="row error" th:if="${error}" th:text="${error}">Ошибка</div>
+    <div class="row ok" th:if="${info}" th:text="${info}">Инфо</div>
+
+    <form class="row" method="post" th:action="@{/payments/interbank}">
+      <input type="hidden" name="bank" th:value="${bank}"/>
+      <div class="grid">
+        <label>client_id
+          <input name="login" th:value="${login}" required/>
+        </label>
+        <label>debtorAccountId
+          <input name="debtorAccountId" placeholder="acc-123" required/>
+        </label>
+        <label>creditorIban
+          <input name="creditorIban" placeholder="NL00BANK0123456789"
+                 pattern="[A-Z]{2}[0-9A-Z]{13,30}" title="IBAN в верхнем регистре, без пробелов" required/>
+        </label>
+        <label>amount
+          <input name="amount" type="number" step="0.01" min="0.01" required/>
+        </label>
+        <label>currency
+          <input name="currency" value="EUR"/>
+        </label>
+        <label style="grid-column:1/-1">description
+          <input name="description" placeholder="Назначение платежа"/>
+        </label>
+        <label>executionDate (опц.)
+          <input name="executionDate" type="date"/>
+        </label>
+        <label>priority
+          <select name="priority">
+            <option value="" selected>обычный</option>
+            <option value="urgent">срочный</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button type="submit">Отправить платёж</button>
+        <a class="btn secondary" th:href="@{|/accounts?bank=${bank}&login=${login}|}">← К счетам</a>
+      </div>
+    </form>
+
+    <div class="row" th:if="${apiErrorBody}">
+      <details open>
+        <summary>API error body</summary>
+        <pre th:text="${apiErrorBody}">—</pre>
+      </details>
+    </div>
+
+    <div class="row" th:if="${paymentResponse}">
+      <h3>Ответ создания</h3>
+      <pre th:text="${paymentResponse}">—</pre>
+    </div>
+
+    <div class="row" th:if="${paymentStatus}">
+      <h3>Статус платежа</h3>
+      <pre th:text="${paymentStatus}">—</pre>
+    </div>
+
+    <p class="row"><a href="/">⟵ На главную</a></p>
+  </div>
+
+  <!-- Опциональный авто-пуллинг статуса, если контроллер кладёт paymentId -->
+  <script th:inline="javascript">
+  /*<![CDATA[*/
+    (function(){
+      var paymentId = /*[[${paymentId}]]*/ null;
+      var bank = /*[[${bank != null ? bank : 'v'}]]*/ 'v';
+      if(!paymentId) return;
+      function poll(){
+        fetch('/payments/status/json?bank=' + encodeURIComponent(bank) + '&paymentId=' + encodeURIComponent(paymentId),
+              { headers:{ 'Accept':'application/json' }})
+          .then(r => r.ok ? r.json() : Promise.reject(r.status))
+          .then(j => {
+            var st = (j && (j.status || (j.data && j.data.status))) || null;
+            if (st && (st.toLowerCase() === 'accepted' || st.toLowerCase() === 'rejected' || st.toLowerCase() === 'completed')) {
+              location.reload();
+            }
+          })
+          .catch(() => {});
+      }
+      setInterval(poll, 5000);
+    })();
+  /*]]>*/
+  </script>
 </body>
 </html>
