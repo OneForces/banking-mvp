@@ -12,6 +12,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -31,44 +33,78 @@ public class ConsentController {
   }
 
   /**
-   * AJAX-пуллинг из UI: вернуть только статус согласия.
+   * AJAX-пуллинг из UI: вернуть статус согласия (и нормализованный статус).
    * Пример: GET /consents/v/{id}/status
-   * Ответ: {"status":"approved|pending|rejected|unknown"}
+   * Ответ: {"status":"Authorised","normalized":"approved"}
    */
   @GetMapping("/consents/{bank}/{id}/status")
   public ResponseEntity<String> status(@PathVariable("bank") String bank,
                                        @PathVariable("id") String id) {
     if (!StringUtils.hasText(id)) {
-      return okJson("{\"status\":\"unknown\"}");
+      return okJson(mapToJson(Map.of("status", "unknown", "normalized", "unknown")));
     }
 
     String baseUrl = resolveBaseUrl(bank);
     try {
-      String token = tokenProvider.get(baseUrl);
+      String token = safeToken(baseUrl); // может быть пустой — клиент решит, нужен ли
       String json  = accountsClient.getConsentStatus(baseUrl, token, id, props.getClientId());
 
-      // Нормализуем к {"status":"approved|pending|rejected|..."}
-      String status = extractStatus(json);
-      if (!StringUtils.hasText(status)) status = "unknown";
-      return okJson("{\"status\":\"" + status + "\"}");
+      String rawStatus = extractStatus(json);
+      String normalized = normalizeStatus(rawStatus);
+
+      return okJson(mapToJson(Map.of(
+          "status", StringUtils.hasText(rawStatus) ? rawStatus : "unknown",
+          "normalized", normalized
+      )));
     } catch (Exception ignored) {
       // На любой ошибке не роняем UI-пуллинг
-      return okJson("{\"status\":\"unknown\"}");
+      return okJson(mapToJson(Map.of("status", "unknown", "normalized", "unknown")));
     }
   }
 
-  /* --------- helpers --------- */
+  /**
+   * Отладочный endpoint: вернуть «сырой» JSON, который вернул банк-клиент.
+   * Пример: GET /consents/v/{id}/status/raw
+   */
+  @GetMapping("/consents/{bank}/{id}/status/raw")
+  public ResponseEntity<String> statusRaw(@PathVariable("bank") String bank,
+                                          @PathVariable("id") String id) {
+    if (!StringUtils.hasText(id)) {
+      return okJson("{}");
+    }
+    String baseUrl = resolveBaseUrl(bank);
+    try {
+      String token = safeToken(baseUrl);
+      String json  = accountsClient.getConsentStatus(baseUrl, token, id, props.getClientId());
+      return okJson(json != null ? json : "{}");
+    } catch (Exception ignored) {
+      return okJson("{}");
+    }
+  }
+
+  /* ==================== helpers ==================== */
 
   private String resolveBaseUrl(String bank) {
-    String b = bank == null ? "v" : bank.toLowerCase();
+    String b = bank == null ? "v" : bank.toLowerCase(Locale.ROOT).trim();
     return switch (b) {
       case "a", "abank" -> props.getAbankBaseUrl();
       case "s", "sbank" -> props.getSbankBaseUrl();
+      case "v", "vbank" -> props.getVbankBaseUrl();
       default -> props.getVbankBaseUrl();
     };
   }
 
-  /** Пытаемся достать поле status из возможных форматов ответа. */
+  /** Аккуратно берём токен: если не получили, возвращаем пустую строку, чтобы не падать. */
+  private String safeToken(String baseUrl) {
+    try {
+      String t = tokenProvider.get(baseUrl);
+      return t == null ? "" : t;
+    } catch (Exception e) {
+      return "";
+    }
+  }
+
+  /** Вытащить первое встреченное поле "status" из любых глубин JSON. */
   private String extractStatus(String json) {
     try {
       JsonNode root = mapper.readTree(json);
@@ -77,10 +113,39 @@ public class ConsentController {
         String v = found.asText(null);
         return StringUtils.hasText(v) ? v : null;
       }
-    } catch (Exception ignored) {
-      // no-op
-    }
+    } catch (Exception ignored) { }
     return null;
+  }
+
+  /**
+   * Приводим разные варианты к каноническим:
+   * approved | pending | rejected | revoked | expired | unknown
+   */
+  private String normalizeStatus(String status) {
+    if (!StringUtils.hasText(status)) return "unknown";
+    String s = status.trim().toLowerCase(Locale.ROOT);
+
+    // Активные
+    if (s.equals("approved") || s.equals("authorised") || s.equals("authorized") || s.equals("valid"))
+      return "approved";
+
+    // Ожидание
+    if (s.equals("pending") || s.equals("awaiting") || s.equals("awaiting_authorisation") || s.equals("awaiting_authorization"))
+      return "pending";
+
+    // Отклонено
+    if (s.equals("rejected") || s.equals("denied") || s.equals("declined"))
+      return "rejected";
+
+    // Отозвано
+    if (s.equals("revoked") || s.equals("cancelled") || s.equals("canceled"))
+      return "revoked";
+
+    // Истёк срок
+    if (s.equals("expired") || s.equals("lapsed"))
+      return "expired";
+
+    return "unknown";
   }
 
   private ResponseEntity<String> okJson(String body) {
@@ -91,5 +156,13 @@ public class ConsentController {
             .sMaxAge(Duration.ZERO))
         .contentType(MediaType.APPLICATION_JSON)
         .body(body);
+  }
+
+  private String mapToJson(Map<String, ?> map) {
+    try {
+      return mapper.writeValueAsString(map);
+    } catch (Exception e) {
+      return "{}";
+    }
   }
 }

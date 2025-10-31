@@ -120,10 +120,9 @@
                       class="js-check">Проверить</button>
 
               <!-- Ссылка на счета при активном согласии -->
-              <a th:if="${login != null}"
-                 th:with="st=${(c.status != null ? c.status : (c.data != null && c.data.status != null ? c.data.status : ''))},
+              <a th:with="st=${(c.status != null ? c.status : (c.data != null && c.data.status != null ? c.data.status : ''))},
                           stl=${#strings.toLowerCase(st)}"
-                 th:if="${stl=='approved' or stl=='authorized' or stl=='authorised' or stl=='valid'}"
+                 th:if="${login != null and (stl=='approved' or stl=='authorized' or stl=='authorised' or stl=='valid')}"
                  th:href="@{|/accounts?bank=${bank}&login=${login}|}"
                  class="btn">К счетам</a>
             </td>
