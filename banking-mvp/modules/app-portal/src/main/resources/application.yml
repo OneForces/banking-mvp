@@ -2,8 +2,16 @@ app:
   vbank-base-url: ${V_BANK_BASE_URL}
   abank-base-url: ${A_BANK_BASE_URL}
   sbank-base-url: ${S_BANK_BASE_URL}
+
   client-id: ${SANDBOX_CLIENT_ID}
   client-secret: ${SANDBOX_CLIENT_SECRET}
+
+  # ВАЖНО для 401/403
+  send-fapi-headers: true
+  default-customer-ip: 203.0.113.10
+  vbank-financial-id: vbank
+  abank-financial-id: abank
+  sbank-financial-id: sbank
 
 server:
   port: 8080

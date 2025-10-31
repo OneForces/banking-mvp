@@ -43,15 +43,16 @@ public class ObAccountsClient {
             }
             """.formatted(clientId);
 
-        String resp = http.post()
+        // ВАЖНО: все заголовки — только через addAuthHeaders (чтобы не слать null и лишние хедеры)
+        RestClient.RequestHeadersSpec<?> req = http.post()
                 .uri(normalize(bankBaseUrl) + "/account-consents/request")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken)
-                .header(HDR_X_REQUESTING_BANK, requestingBank)
-                .header(HDR_X_REQUEST_ID, UUID.randomUUID().toString())
-                .body(body)
-                .retrieve()
+                .body(body);
+
+        req = addAuthHeaders(req, bearerToken, null, requestingBank);
+
+        String resp = req.retrieve()
                 .onStatus(HttpStatusCode::isError, (rq, rs) -> {
                     throw readAsObApiError("Consent request failed", rs);
                 })
