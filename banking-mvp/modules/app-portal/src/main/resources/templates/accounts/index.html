@@ -125,10 +125,11 @@
       .catch(() => {});
   }
 
-  if(consentId && consentStatus && String(consentStatus).toLowerCase() === 'pending'){
+  // авто-поллинг только если статус PENDING
+  if (consentId && consentStatus && String(consentStatus).toLowerCase() === 'pending') {
     setInterval(pollOnce, 5000);
     const btn = document.getElementById('check');
-    if(btn) btn.addEventListener('click', e => { e.preventDefault(); pollOnce(); });
+    if (btn) btn.addEventListener('click', e => { e.preventDefault(); pollOnce(); });
   }
 /*]]>*/
 </script>

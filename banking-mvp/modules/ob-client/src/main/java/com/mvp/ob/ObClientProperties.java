@@ -1,29 +1,14 @@
 package com.mvp.ob;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
  * Связывается с application.yml по префиксу "app".
- * Поддерживает kebab-case ключи: client-id -> clientId и т.д.
- *
- * Пример настроек:
- *
- * app:
- *   vbank-base-url: https://vbank.open.bankingapi.ru
- *   abank-base-url: https://abank.open.bankingapi.ru
- *   sbank-base-url: https://sbank.open.bankingapi.ru
- *
- *   client-id: team101
- *   client-secret: secret
- *
- *   # опционально: заголовки x-fapi-*
- *   send-fapi-headers: true
- *   default-customer-ip: 203.0.113.10
- *   vbank-financial-id: vbank
- *   abank-financial-id: abank
- *   sbank-financial-id: sbank
+ * Поддерживает kebab-case ключи.
  */
+@Component
 @ConfigurationProperties(prefix = "app")
 public class ObClientProperties {
 
@@ -36,11 +21,11 @@ public class ObClientProperties {
     private String clientId;
     private String clientSecret;
 
-    // --- FAPI headers (optional, но полезно для транзакций) ---
+    // --- FAPI headers ---
     /** Включать ли автоматическую отправку x-fapi-* заголовков. */
     private boolean sendFapiHeaders = true;
 
-    /** Какой IP подставлять в x-fapi-customer-ip-address/x-psu-ip-address (для песочниц допустим статический). */
+    /** IP для x-fapi-customer-ip-address/x-psu-ip-address. */
     private String defaultCustomerIp = "203.0.113.10";
 
     /** Финансовые идентификаторы банка для x-fapi-financial-id. */
@@ -97,7 +82,7 @@ public class ObClientProperties {
         return (bankCode == null) ? "v" : bankCode.toLowerCase();
     }
 
-    /** Базовый URL по коду банка (если где-то понадобится). */
+    /** Базовый URL по коду банка. */
     public String baseUrlFor(String bankCode) {
         String b = normalizeBankCode(bankCode);
         return switch (b) {

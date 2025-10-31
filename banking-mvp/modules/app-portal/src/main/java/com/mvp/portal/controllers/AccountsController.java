@@ -49,10 +49,11 @@ public class AccountsController {
     }
 
     try {
-      String requestingBank = props.getClientId();
       String clientId = customerLogin.trim();
-
       String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
+
+      // X-Requesting-Bank должен быть ID команды (например, "team101")
+      String requestingBank = requestingBankFromBaseUrl(baseUrl);
 
       ConsentCreateResult consent = accountsClient.createConsent(baseUrl, token, clientId, requestingBank);
 
@@ -64,7 +65,7 @@ public class AccountsController {
       model.addAttribute("consentRequestId", consent.getRequestId());
       model.addAttribute("consentAutoApproved", consent.isAutoApproved());
 
-      boolean consentReady = StringUtils.hasText(consentId) && "approved".equalsIgnoreCase(status);
+      boolean consentReady = StringUtils.hasText(consentId) && isConsentActive(status);
       if (!consentReady) {
         model.addAttribute(
             "info",
@@ -111,7 +112,8 @@ public class AccountsController {
 
     try {
       String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
-      String requestingBank = props.getClientId();
+      // Используем ID команды как X-Requesting-Bank
+      String requestingBank = requestingBankFromBaseUrl(baseUrl);
 
       String accJson = accountsClient.getAccountById(baseUrl, token, accountId, consentId, requestingBank);
       String balJson = accountsClient.getAccountBalances(baseUrl, token, accountId, consentId, requestingBank);
@@ -120,6 +122,7 @@ public class AccountsController {
       model.addAttribute("balances", safeToMap(balJson));
     } catch (ObAccountsClient.ObApiException apiEx) {
       model.addAttribute("error", "Account fetch failed: HTTP " + apiEx.getStatus().value());
+      model.addAttribute("apiErrorBody", apiEx.getResponseBody());
     } catch (Exception e) {
       model.addAttribute("error", "Failed: " + e.getMessage());
     }
@@ -148,9 +151,52 @@ public class AccountsController {
 
     try {
       String token = authClient.obtainBankToken(baseUrl, props.getClientId(), props.getClientSecret());
-      String requestingBank = props.getClientId();
+      // Используем ID команды как X-Requesting-Bank
+      String requestingBank = requestingBankFromBaseUrl(baseUrl);
+      String clientId = (login == null ? "" : login.trim());
 
-      String txJson = accountsClient.getAccountTransactions(baseUrl, token, accountId, consentId, requestingBank, from, to);
+      // 1) Проверяем статус согласия
+      try {
+        String consentJson = accountsClient.getConsentStatus(baseUrl, token, consentId, requestingBank);
+        model.addAttribute("consentJson", consentJson);
+
+        Map<String, Object> consentMap = safeToMap(consentJson);
+        String status = null;
+        List<String> permissions = List.of();
+
+        Object topStatus = consentMap.get("status");
+        if (topStatus instanceof String s) status = s;
+
+        Object dataObj = consentMap.get("data");
+        if (dataObj instanceof Map<?, ?> dm) {
+          Object ds = dm.get("status");
+          if (ds instanceof String s) status = s;
+          Object perms = dm.get("permissions");
+          if (perms instanceof List<?> pl) {
+            List<String> out = new ArrayList<>();
+            for (Object p : pl) if (p != null) out.add(String.valueOf(p));
+            permissions = out;
+          }
+        }
+
+        model.addAttribute("consentPermissions", permissions);
+        model.addAttribute("consentStatusNormalized", normalizeStatus(status));
+
+        if (!isConsentActive(status)) {
+          model.addAttribute("error", "Consent is not approved (status=" + (status == null ? "unknown" : status) + ")");
+          model.addAttribute("apiErrorBody", consentJson);
+          return "accounts/transactions";
+        }
+      } catch (ObAccountsClient.ObApiException apiEx) {
+        model.addAttribute("error", "Consent status fetch failed: HTTP " + apiEx.getStatus().value());
+        model.addAttribute("apiErrorBody", apiEx.getResponseBody());
+        return "accounts/transactions";
+      }
+
+      // 2) Транзакции
+      String txJson = accountsClient.getAccountTransactions(
+          baseUrl, token, accountId, consentId, requestingBank, clientId, from, to
+      );
       model.addAttribute("transactionsJson", txJson);
 
       List<Map<String, Object>> tx = extractTx(txJson);
@@ -159,6 +205,7 @@ public class AccountsController {
       }
     } catch (ObAccountsClient.ObApiException apiEx) {
       model.addAttribute("error", "Transactions fetch failed: HTTP " + apiEx.getStatus().value());
+      model.addAttribute("apiErrorBody", apiEx.getResponseBody());
     } catch (Exception e) {
       model.addAttribute("error", "Failed: " + e.getMessage());
     }
@@ -177,7 +224,28 @@ public class AccountsController {
     };
   }
 
-  /** Поддерживаем обе возможные формы: data.accounts[] и data.account[]. */
+  /**
+   * ID команды для заголовка X-Requesting-Bank (например, "team101").
+   * По спецификации это не код банка из URL, а именно идентификатор вашей команды.
+   */
+  private String requestingBankFromBaseUrl(String baseUrl) {
+    // параметр baseUrl не используется намеренно; оставлен ради минимального диффа
+    return props.getClientId();
+  }
+
+  private boolean isConsentActive(String status) {
+    if (status == null) return false;
+    String st = status.trim().toLowerCase();
+    return st.equals("approved") || st.equals("authorized") || st.equals("authorised") || st.equals("valid");
+  }
+
+  private String normalizeStatus(String status) {
+    if (status == null) return "unknown";
+    String st = status.trim().toLowerCase();
+    if (st.equals("authorised") || st.equals("authorized")) return "authorized";
+    return st;
+  }
+
   private List<Map<String, Object>> extractAccounts(String json) {
     try {
       JsonNode root = mapper.readTree(json);
@@ -207,7 +275,6 @@ public class AccountsController {
     }
   }
 
-  /** Ищем массив транзакций в ответе: data.transactions[] или data.transaction[]. */
   private List<Map<String, Object>> extractTx(String json) {
     try {
       JsonNode root = mapper.readTree(json);
